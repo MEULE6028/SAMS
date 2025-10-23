@@ -1,0 +1,292 @@
+# STUDENT AFFAIR MANAGEMENT SYSTEM (SAMS) – REPLIT AI PROTOTYPE FULL PROMPT & CODE SETUP
+
+---
+
+## 🎯 PROJECT CONTEXT
+
+The **Student Affair Management System (SAMS)** is a next-generation digital ecosystem designed for the **University of Eastern Africa, Baraton (UEAB)**. It unifies three subsystems — **Chapa360 (Finance)**, **Student Work Study Management (SWSMS)**, and **Student Governance Management (SGMS)** — into one modern, transparent, and data-driven platform.
+
+This document provides a **single, unified Replit AI System Prompt and Code Setup Guide**, enabling the creation of a complete, functional, and visually appealing prototype with authentication, routing, UI/UX, and data simulation capabilities.
+
+---
+
+## 🧠 REPLIT AI MASTER PROMPT
+
+```
+You are the AI full-stack engineer for the “Student Affair Management System (SAMS)” prototype — a professional-grade, modular full-stack system for the University of Eastern Africa, Baraton (UEAB).
+
+### PROJECT GOAL
+Build a fully functional full-stack prototype combining:
+1. **Chapa360** – Finance and student account management.
+2. **SWSMS** – Work Study Management and time tracking.
+3. **SGMS** – Student Governance Management and handover.
+
+The system must include authentication, dashboards, routing, and a modern institutional UI with UEAB branding.
+
+---
+
+### 🧩 TECH STACK
+- **Frontend:** Next.js 14 (TypeScript) + TailwindCSS + Framer Motion + React Query (TanStack)
+- **Backend:** NestJS or Express (TypeScript)
+- **Database:** PostgreSQL (via Prisma ORM)
+- **Auth:** JWT-based (JWT_SECRET from Replit Secrets)
+- **Package Manager:** pnpm
+- **Design System:** UEAB Color Palette
+  - Primary Blue: `#0033A0`
+  - Secondary Gold: `#FFD100`
+  - Accent Blue Light: `#4A7BE3`
+  - Accent Gold Light: `#FFEA70`
+- **Icons:** Lucide React / Heroicons
+- **Animations:** Framer Motion
+- **CI/CD:** GitHub Workflows (optional)
+
+---
+
+### 🔐 AUTHENTICATION
+Implement a secure **JWT authentication system** with these features:
+- Endpoints:
+  - `POST /api/auth/login`
+  - `POST /api/auth/register`
+  - `GET /api/auth/verify`
+- Use `JWT_SECRET` from Replit Secrets.
+- Store token in `localStorage`.
+- Protect routes using middleware and guards.
+
+#### Test Accounts
+```
+
+Admin: [admin@ueab.ac.ke](mailto:admin@ueab.ac.ke) / Admin@123
+Treasurer: [treasurer@ueab.ac.ke](mailto:treasurer@ueab.ac.ke) / Treasurer@123
+Student: [student@ueab.ac.ke](mailto:student@ueab.ac.ke) / Student@123
+
+```
+
+---
+
+### 🗺️ ROUTING STRUCTURE
+Implement routing using Next.js App Router with protected pages:
+```
+
+/login
+/dashboard
+/chapa360
+/swsms
+/sgms
+/settings
+
+```
+
+- Use middleware (`withAuth`) to protect `/dashboard`, `/chapa360`, `/swsms`, `/sgms`, `/settings`.
+- Redirect users after login based on role:
+  - Admin → `/sgms`
+  - Treasurer → `/chapa360`
+  - Student → `/dashboard`
+
+---
+
+### 🎨 UI & UX DESIGN
+Create a **modern, responsive, and elegant design** that represents UEAB’s academic excellence:
+- Typography: `Inter` or `Poppins`
+- Use gradient headers (Blue → Gold)
+- Components:
+  - Navbar (with logo placeholder and dynamic role menu)
+  - Sidebar (collapsible with icons)
+  - Dashboard cards (animated)
+  - Button, Modal, Profile dropdown, Theme toggle (light/dark)
+- Add Framer Motion transitions between pages.
+- Use Tailwind’s `@apply` for reusable utilities.
+- Mobile-first responsiveness.
+
+---
+
+### 🧱 COMPONENT STRUCTURE
+```
+
+/apps/frontend/components
+Navbar.tsx
+Sidebar.tsx
+Button.tsx
+DashboardCard.tsx
+Layout.tsx
+/apps/frontend/pages
+login.tsx
+dashboard.tsx
+chapa360.tsx
+swsms.tsx
+sgms.tsx
+settings.tsx
+/apps/backend/src
+auth/auth.controller.ts
+auth/auth.service.ts
+middleware/auth.middleware.ts
+users/user.model.ts
+
+```
+
+---
+
+### 💾 DATABASE MODELS (PRISMA)
+```
+
+model User {
+id            String   @id @default(uuid())
+email         String   @unique
+password      String
+role          String
+fullName      String
+universityId  String
+accounts      Account[]
+}
+
+model Account {
+id            String   @id @default(uuid())
+balance       Float    @default(0)
+userId        String
+user          User     @relation(fields: [userId], references: [id])
+transactions  Transaction[]
+}
+
+model Transaction {
+id            String   @id @default(uuid())
+amount        Float
+type          String
+accountId     String
+createdAt     DateTime @default(now())
+}
+
+model WorkApplication {
+id            String   @id @default(uuid())
+studentId     String
+department    String
+hoursWorked   Int      @default(0)
+approved      Boolean  @default(false)
+}
+
+model Election {
+id            String   @id @default(uuid())
+title         String
+candidates    Candidate[]
+}
+
+model Candidate {
+id            String   @id @default(uuid())
+name          String
+electionId    String
+votes         Int      @default(0)
+}
+
+```
+
+---
+
+### 📊 DASHBOARD PAGES
+#### `/dashboard`
+- Show cards for:
+  - Account balance (mock)
+  - Work study hours (mock)
+  - Upcoming election (mock)
+
+#### `/chapa360`
+- Display transactions ledger (mock data).
+- Include placeholders for M-Pesa/QuickBooks integration.
+
+#### `/swsms`
+- Work study application submission.
+- Department vetting dashboard.
+- Virtual timecard entry and hours tracking.
+
+#### `/sgms`
+- Leadership registry and handover documentation.
+- Election dashboard (mock nominations and voting panel).
+
+---
+
+### 💅 DESIGN HIGHLIGHTS
+- Blue-gold gradient hero banner.
+- Animated cards with hover motion.
+- Dark mode with inverted palette.
+- Smooth route transitions.
+- Institutional visual polish.
+
+---
+
+### ⚙️ SETUP FILES
+#### `.replit`
+```
+
+run = "pnpm --filter frontend dev & pnpm --filter backend start:dev"
+
+````
+
+#### `tailwind.config.js`
+```js
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        'ueab-blue': '#0033A0',
+        'ueab-gold': '#FFD100',
+        'ueab-blue-light': '#4A7BE3',
+        'ueab-gold-light': '#FFEA70',
+      },
+    },
+  },
+  plugins: [],
+}
+````
+
+#### `package.json`
+
+```json
+{
+  "name": "sams-prototype",
+  "private": true,
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "dev": "pnpm --filter frontend dev & pnpm --filter backend start:dev",
+    "build": "pnpm --recursive build"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.0.0",
+    "husky": "^9.0.0"
+  }
+}
+```
+
+---
+
+### 🧠 RUNNING THE PROJECT
+
+1. Open Replit and create a new project.
+2. Paste this entire prompt into the AI chat.
+3. Add the Replit secret:
+
+```
+Key: JWT_SECRET
+Value: f93b8f1d5c72a9e53d7d12a83e0e4c63a4cdb43e9d7a1a81b7e582d75e4d9a1f
+```
+
+4. Run the app with:
+
+```
+pnpm --filter frontend dev & pnpm --filter backend start:dev
+```
+
+5. Test logins using the provided credentials.
+6. Verify dashboards load per role and all pages are responsive.
+
+---
+
+### ✅ EXPECTED OUTPUT
+
+* Secure JWT authentication and role-based routing.
+* Beautiful UEAB-branded UI.
+* Working dashboards for Chapa360, SWSMS, and SGMS.
+* Responsive layout and dark/light theme.
+* Ready for next step: analytics and live integrations.
+
+---
+
+> *“This single unified prompt enables Replit AI to architect, design, and code the complete SAMS prototype — merging functionality, security, and beauty into one institutional system.”*
