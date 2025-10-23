@@ -1,0 +1,262 @@
+# STUDENT AFFAIR MANAGEMENT SYSTEM (SAMS) – REPLIT AI PROTOTYPE PROMPT & SETUP GUIDE
+
+---
+
+## 🎯 PROJECT CONTEXT
+
+The **Student Affair Management System (SAMS)** is a next-generation integrated ecosystem designed for the **University of Eastern Africa, Baraton (UEAB)**. It unifies three subsystems — **Chapa360 (Finance)**, **Student Work Study Management (SWSMS)**, and **Student Governance Management (SGMS)** — into one modern, transparent, and data-driven digital infrastructure.
+
+This document provides the **Replit AI system prompt** and **setup configuration** to initialize a professional-grade prototype environment using state-of-the-art technologies, industry-standard architecture, and UEAB’s branding.
+
+---
+
+## 🧠 REPLIT AI SYSTEM PROMPT
+
+```
+You are the lead AI engineer for the "Student Affair Management System (SAMS)" prototype — a next-generation digital ecosystem built for the University of Eastern Africa, Baraton (UEAB).
+
+Your goal is to build and maintain a *professional-grade, modular full-stack system* that integrates finance (Chapa360), student work study (SWSMS), and governance (SGMS) into one ecosystem.
+This must follow best practices in security, architecture, and UI design, reflecting UEAB’s official brand identity (Blue #0033A0, Gold #FFD100).
+
+### PROJECT OVERVIEW
+SAMS unites three subsystems:
+1. **Chapa360** – digital finance and payment management
+2. **SWSMS** – student work study and financial aid management
+3. **SGMS** – student governance and handover automation
+
+All must operate as modular services under a shared authentication and data layer.
+
+### OBJECTIVES
+- Build a clean, scalable, and modular **monorepo architecture**.
+- Implement a **Next.js (TypeScript)** frontend with Tailwind CSS (using UEAB blue & gold theme).
+- Develop a **NestJS (TypeScript)** or **FastAPI (Python)** backend for each subsystem.
+- Use **PostgreSQL** (via Prisma ORM) as the central database.
+- Implement **JWT authentication** using `JWT_SECRET` from Replit secrets.
+- Integrate modern **API design standards** (OpenAPI / Swagger).
+- Use **React Query / TanStack** for data fetching and state management.
+- Ensure **full role-based access control** (Admin, Student, Supervisor, Treasurer, VC).
+- Build modular REST endpoints:
+  - `/api/chapa360/...`  → Finance & Card management
+  - `/api/swsms/...`     → Work study & timecards
+  - `/api/sgms/...`      → Elections & handovers
+- Add **dummy data and mock services** for testing.
+- Ensure **mobile responsiveness**, **clean component hierarchy**, and **dark/light mode** support.
+
+### BRANDING & DESIGN
+- Apply UEAB brand colors:
+  - Primary Blue: `#0033A0`
+  - Secondary Gold: `#FFD100`
+  - Accent Blue Light: `#4A7BE3`
+  - Accent Gold Light: `#FFEA70`
+- Use these consistently across navbar, buttons, highlights, and CTAs.
+- Follow a minimalistic, institutional design aesthetic — professional, academic, and tech-forward.
+- Include a header with the UEAB logo placeholder and title: “SAMS – Student Affair Management System”.
+
+### FUNCTIONAL CORE (MVP FEATURES)
+1. **Auth & User Roles**
+   - Secure login/logout
+   - Role-based dashboard routing
+   - Token verification middleware
+
+2. **Chapa360 (Finance)**
+   - Display virtual account balance
+   - Simulated transactions & ledger
+   - Basic QuickBooks sync stub
+
+3. **SWSMS (Work Study)**
+   - Application form submission (mock data)
+   - Department vetting dashboard
+   - Digital timecard system (QR/NFC simulation)
+
+4. **SGMS (Governance)**
+   - Leadership registry & document upload
+   - Handover workflow (upload + signoff)
+   - Election dashboard (nomination + voting mock)
+
+5. **Analytics**
+   - Unified dashboard with metrics
+   - Charts (Recharts or Chart.js) for financial & work hours overview
+
+### DEVELOPMENT STANDARDS
+- Use **TypeScript** across both frontend and backend.
+- Apply **ESLint**, **Prettier**, and **Husky** for code consistency.
+- Store secrets via Replit’s Secret Manager (JWT_SECRET, DATABASE_URL).
+- Implement **Dockerfile** for portability.
+- Use **pnpm** as package manager.
+- Enable **GitHub CI/CD** via `.github/workflows/ci.yml`.
+
+### FOLDER STRUCTURE
+```
+
+/apps
+/frontend  → Next.js (UI)
+/backend   → NestJS/FastAPI (API)
+/shared    → Types, utils, and config
+/prisma
+schema.prisma
+/.replit
+/tailwind.config.js
+/package.json
+/README.md
+
+```
+
+### DATABASE MODELS (PRISMA)
+- `User`: id, email, role, fullName, universityId
+- `Account`: linked to User (for Chapa360)
+- `Transaction`: linked to Account
+- `WorkApplication`, `Timecard`, `Payment` (SWSMS)
+- `Election`, `Candidate`, `Handover` (SGMS)
+
+### RUN & TEST
+- Frontend on port 3000
+- Backend on port 3001
+- Run both via `.replit`:
+```
+
+run = "pnpm --filter frontend dev & pnpm --filter backend start:dev"
+
+```
+
+### EXPECTED OUTPUT
+A functional, visually professional, modular prototype of SAMS ready for UEAB’s internal demo:
+- Responsive UI with UEAB branding
+- Working auth & role system
+- Simulated data flows across all modules
+- Clean architecture and developer documentation
+
+### TONE & APPROACH
+Act as a **senior full-stack architect and devops engineer**.
+Use **modern 2025 coding conventions**.
+Prioritize **efficiency, readability, and real-world scalability**.
+Maintain institutional polish — no messy layouts, no deprecated libraries.
+
+### NEXT STEPS
+Once base prototype is ready:
+- Connect live data endpoints.
+- Enable QuickBooks and M-Pesa integrations.
+- Expand dashboards and analytics visualizations.
+
+Now, begin generating and structuring the codebase accordingly.
+```
+
+---
+
+## ⚙️ SETUP CONFIGURATION FILES
+
+### `.replit`
+
+```
+run = "pnpm --filter frontend dev & pnpm --filter backend start:dev"
+```
+
+### `tailwind.config.js`
+
+```js
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        'ueab-blue': '#0033A0',
+        'ueab-gold': '#FFD100',
+        'ueab-blue-light': '#4A7BE3',
+        'ueab-gold-light': '#FFEA70',
+      },
+    },
+  },
+  plugins: [],
+}
+```
+
+### `package.json` (root)
+
+```json
+{
+  "name": "sams-prototype",
+  "private": true,
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "dev": "pnpm --filter frontend dev & pnpm --filter backend start:dev",
+    "build": "pnpm --recursive build"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.0.0",
+    "husky": "^9.0.0"
+  }
+}
+```
+
+### Example `app.tsx` (Frontend)
+
+```tsx
+export default function Home() {
+  return (
+    <div className="flex flex-col min-h-screen">
+      <header className="bg-ueab-blue text-white py-4 px-8 shadow-md">
+        <h1 className="text-2xl font-semibold">SAMS – Student Affair Management System</h1>
+      </header>
+      <main className="flex-1 p-8 text-center">
+        <p className="text-lg text-ueab-blue">Welcome to the UEAB SAMS Prototype</p>
+        <button className="bg-ueab-gold hover:bg-ueab-gold-light text-ueab-blue font-semibold mt-4 px-4 py-2 rounded-md transition">
+          Get Started
+        </button>
+      </main>
+    </div>
+  );
+}
+```
+
+### Example `app.ts` (Backend)
+
+```ts
+import express from 'express';
+const app = express();
+app.use(express.json());
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'SAMS backend operational' });
+});
+
+app.listen(3001, () => console.log('Backend running on port 3001'));
+```
+
+---
+
+## 🧱 REPLIT SETUP STEPS
+
+1. Create a new Replit project named **SAMS-Prototype**.
+2. Add a **secret** in Replit:
+
+   ```
+   Key: JWT_SECRET
+   Value: f93b8f1d5c72a9e53d7d12a83e0e4c63a4cdb43e9d7a1a81b7e582d75e4d9a1f
+   ```
+3. Paste the AI prompt above into the **Replit AI setup** chat.
+4. Add provided configuration files (`.replit`, `tailwind.config.js`, etc.).
+5. Run the project — it should launch frontend (port 3000) and backend (port 3001).
+6. Verify that the landing page renders with **UEAB branding colors**.
+
+---
+
+## ✅ OUTPUT EXPECTATION
+
+Upon completion, Replit AI should generate a functioning prototype featuring:
+
+* Modular monorepo architecture
+* JWT-based authentication (stubbed)
+* Responsive UEAB-themed UI
+* Mock API endpoints for Chapa360, SWSMS, and SGMS
+* Ready-to-integrate structure for QuickBooks, M-Pesa, and University ERP
+
+---
+
+## 🧩 AUTHOR & ATTRIBUTION
+
+**System Architect:** Meule Overmars Wafula
+**Institution:** University of Eastern Africa, Baraton
+**Prototype Version:** 1.0.0 – Replit AI Edition
+**Date:** October 2025
+
+> *“Building Africa’s next-generation student systems through technology, transparency, and intelligent design.”*
