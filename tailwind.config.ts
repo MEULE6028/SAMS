@@ -11,6 +11,12 @@ export default {
         sm: ".1875rem", /* 3px */
       },
       colors: {
+        // UEAB Brand Colors
+        "ueab-blue": "hsl(210 100% 31%)",
+        "ueab-gold": "hsl(48 100% 50%)",
+        "ueab-blue-light": "hsl(226 75% 60%)",
+        "ueab-gold-light": "hsl(54 100% 72%)",
+        
         // Flat / base colors (regular buttons)
         background: "hsl(var(--background) / <alpha-value>)",
         foreground: "hsl(var(--foreground) / <alpha-value>)",

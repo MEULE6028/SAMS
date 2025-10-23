@@ -2,25 +2,57 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    let errorMessage = res.statusText;
+    try {
+      const errorData = await res.json();
+      errorMessage = errorData.error || errorMessage;
+    } catch {
+      const text = await res.text();
+      errorMessage = text || errorMessage;
+    }
+    throw new Error(errorMessage);
   }
+}
+
+function getAuthHeaders(): HeadersInit {
+  const authData = localStorage.getItem("sams-auth");
+  if (authData) {
+    try {
+      const { state } = JSON.parse(authData);
+      if (state?.token) {
+        return {
+          "Authorization": `Bearer ${state.token}`,
+        };
+      }
+    } catch (e) {
+      console.error("Error parsing auth data:", e);
+    }
+  }
+  return {};
 }
 
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
-): Promise<Response> {
+): Promise<any> {
+  const headers: HeadersInit = {
+    ...getAuthHeaders(),
+  };
+
+  if (data) {
+    headers["Content-Type"] = "application/json";
+  }
+
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
 
   await throwIfResNotOk(res);
-  return res;
+  return res.json();
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -31,6 +63,7 @@ export const getQueryFn: <T>(options: {
   async ({ queryKey }) => {
     const res = await fetch(queryKey.join("/") as string, {
       credentials: "include",
+      headers: getAuthHeaders(),
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
