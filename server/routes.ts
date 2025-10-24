@@ -37,7 +37,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/register", async (req, res) => {
     try {
       const data = insertUserSchema.parse(req.body);
-      
+
       const existingUser = await db
         .select()
         .from(users)
@@ -49,22 +49,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const hashedPassword = await hashPassword(data.password);
-      
+
       const [user] = await db
         .insert(users)
         .values({
           ...data,
           password: hashedPassword,
-          role: "student",
         })
         .returning();
 
+      console.log('User created:', user.id, user.email, user.role);
+
       const accountNumber = `UEAB${Date.now().toString().slice(-8)}`;
-      await db.insert(accounts).values({
-        userId: user.id,
-        accountNumber,
-        balance: "0.00",
-      });
+      try {
+        await db.insert(accounts).values({
+          userId: user.id,
+          accountNumber,
+          balance: "0.00",
+        });
+        console.log('Account created for user:', user.id);
+      } catch (accountError: any) {
+        console.error('Error creating account:', accountError.message);
+        throw new Error(`Failed to create account: ${accountError.message}`);
+      }
 
       const token = generateToken(user);
 
@@ -79,6 +86,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         token,
       });
     } catch (error: any) {
+      console.error('Registration error:', error.message, error.stack);
       res.status(400).json({ error: error.message });
     }
   });

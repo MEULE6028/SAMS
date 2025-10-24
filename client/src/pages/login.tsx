@@ -22,7 +22,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/lib/auth";
+import { useAuth, getDashboardRoute } from "@/lib/auth";
 import { apiRequest } from "@/lib/queryClient";
 
 const loginSchema = z.object({
@@ -55,7 +55,9 @@ export default function LoginPage() {
         title: "Login successful",
         description: `Welcome back, ${response.user.fullName}!`,
       });
-      setLocation("/dashboard");
+      // Redirect based on user role
+      const dashboardRoute = getDashboardRoute(response.user);
+      setLocation(dashboardRoute);
     } catch (error: any) {
       toast({
         title: "Login failed",
@@ -154,7 +156,7 @@ export default function LoginPage() {
                 <div className="text-center">
                   <Button
                     type="button"
-                    variant="link"
+                    variant="ghost"
                     className="text-ueab-blue"
                     onClick={() => setLocation("/register")}
                     data-testid="link-register"
