@@ -7,7 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
-import { useAuth } from "@/lib/auth";
+import { useAuth, getDashboardRoute } from "@/lib/auth";
 
 import NotFound from "@/pages/not-found";
 import LoginPage from "@/pages/login";
@@ -42,7 +42,8 @@ function PublicRoute({ component: Component }: { component: () => JSX.Element })
   const [, setLocation] = useLocation();
 
   if (user) {
-    setLocation("/dashboard");
+    const dashboardRoute = getDashboardRoute(user);
+    setLocation(dashboardRoute);
     return null;
   }
 
@@ -97,7 +98,7 @@ function Router() {
         <ProtectedRoute component={AdminElectionsPage} />
       </Route>
       <Route path="/">
-        {user ? <Redirect to="/dashboard" /> : <Redirect to="/login" />}
+        {user ? <Redirect to={getDashboardRoute(user)} /> : <Redirect to="/login" />}
       </Route>
       <Route component={NotFound} />
     </Switch>

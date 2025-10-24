@@ -9,6 +9,18 @@ interface AuthState {
   logout: () => Promise<void>;
 }
 
+// Helper function to get the appropriate dashboard route based on user role
+export function getDashboardRoute(user: User | null): string {
+  if (!user) return '/login';
+
+  const adminRoles = ['admin', 'supervisor', 'treasurer', 'vc'];
+  if (adminRoles.includes(user.role)) {
+    return '/admin/chapa360/accounts';
+  }
+
+  return '/dashboard';
+}
+
 export const useAuth = create<AuthState>()(
   persist(
     (set, get) => ({
