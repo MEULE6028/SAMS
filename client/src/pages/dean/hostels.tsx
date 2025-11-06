@@ -131,13 +131,12 @@ export default function HostelsPage() {
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
-                      className={`h-2 rounded-full transition-all ${
-                        hostel.occupancyRate >= 80
+                      className={`h-2 rounded-full transition-all ${hostel.occupancyRate >= 80
                           ? "bg-red-500"
                           : hostel.occupancyRate >= 50
-                          ? "bg-yellow-500"
-                          : "bg-green-500"
-                      }`}
+                            ? "bg-yellow-500"
+                            : "bg-green-500"
+                        }`}
                       style={{ width: `${hostel.occupancyRate}%` }}
                     />
                   </div>
@@ -220,7 +219,7 @@ export default function HostelsPage() {
                     <TableCell>{room.occupiedBeds}</TableCell>
                     <TableCell>{room.availableBeds}</TableCell>
                     <TableCell>
-                      {room.students.length > 0 ? (
+                      {room.students && room.students.length > 0 ? (
                         <div className="space-y-1">
                           {room.students.map((student) => (
                             <div key={student.studentId} className="text-sm">

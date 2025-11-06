@@ -89,7 +89,7 @@ export default function AllocateRoomPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/dean/hostels"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dean/dashboard/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dean/rooms"] });
-      
+
       // Reset form
       setSelectedStudent(null);
       setSelectedHostel("");

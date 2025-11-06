@@ -4,14 +4,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  FileCheck, 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
-  User, 
-  Mail, 
-  Phone, 
+import {
+  FileCheck,
+  CheckCircle,
+  XCircle,
+  Clock,
+  User,
+  Mail,
+  Phone,
   Building2,
   BedDouble,
   Calendar
@@ -256,7 +256,7 @@ export default function BookingsPage() {
               {action === "approve" ? "Approve" : "Reject"} Booking Request
             </DialogTitle>
             <DialogDescription>
-              {action === "approve" 
+              {action === "approve"
                 ? `Approve booking request for ${selectedBooking?.studentName}?`
                 : `Reject booking request for ${selectedBooking?.studentName}?`
               }

@@ -129,8 +129,8 @@ export default function DeanDashboard() {
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={analytics?.hostelStats || []}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="hostelName" 
+                <XAxis
+                  dataKey="hostelName"
                   angle={-45}
                   textAnchor="end"
                   height={100}
@@ -190,10 +190,10 @@ export default function DeanDashboard() {
               <YAxis />
               <Tooltip />
               <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="allocations" 
-                stroke="#0ea5e9" 
+              <Line
+                type="monotone"
+                dataKey="allocations"
+                stroke="#0ea5e9"
                 strokeWidth={2}
                 name="Allocations"
               />

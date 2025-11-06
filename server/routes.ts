@@ -2729,15 +2729,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const EXTERNAL_URL = process.env.VITE_STUDENT_API_URL || 'https://studedatademo.azurewebsites.net';
       console.log(`[TEST] Fetching from: ${EXTERNAL_URL}/api/residences`);
-      
+
       const response = await fetch(`${EXTERNAL_URL}/api/residences`);
       const data = await response.json();
-      
+
       const ladiesHostels = data.filter((r: any) => {
         const hostelName = r.hostelName || '';
         return hostelName.toLowerCase().includes('ladies');
       });
-      
+
       res.json({
         totalResidences: data.length,
         ladiesResidences: ladiesHostels.length,
@@ -2793,7 +2793,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get dashboard statistics for residence dean
   app.get("/api/dean/dashboard/stats", authMiddleware, async (req: AuthRequest, res) => {
     const user = req.user!;
-    
+
     // Only allow deanLadies and deanMen roles
     if (!['deanLadies', 'deanMen'].includes(user.role)) {
       return res.status(403).json({ error: "Insufficient permissions" });
@@ -2801,7 +2801,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       console.log(`\n=== [DEAN DASHBOARD] ${user.role} ===`);
-      
+
       // Fetch all residences from external API
       const residencesResponse = await fetch(`${EXTERNAL_API_URL}/api/residences`);
       if (!residencesResponse.ok) {
@@ -2812,8 +2812,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`[EXTERNAL API] Total residences fetched: ${allResidences.length}`);
       console.log(`[EXTERNAL API] Sample residence:`, JSON.stringify(allResidences[0], null, 2));
 
-  // Filter residences by gender based on dean role (resolve student profiles)
-  const residences = await filterByGender(allResidences, user.role);
+      // Filter residences by gender based on dean role (resolve student profiles)
+      const residences = await filterByGender(allResidences, user.role);
       console.log(`[FILTER] ${user.role} managing ${residences.length} residences`);
 
       // Calculate statistics
@@ -2827,7 +2827,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       onCampusResidences.forEach((r: any) => {
         const hostel = r.hostelName || 'Unknown Hostel';
         const room = r.roomNumber || 'Unknown Room';
-        
+
         if (!hostelMap.has(hostel)) {
           hostelMap.set(hostel, new Set());
         }
@@ -2889,7 +2889,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all rooms for residence dean
   app.get("/api/dean/rooms", authMiddleware, async (req: AuthRequest, res) => {
     const user = req.user!;
-    
+
     if (!['deanLadies', 'deanMen'].includes(user.role)) {
       return res.status(403).json({ error: "Insufficient permissions" });
     }
@@ -2935,7 +2935,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         currentOccupancy: room.students.length,
         availableBeds: room.capacity - room.students.length,
         status: room.students.length === 0 ? 'empty' :
-                room.students.length < room.capacity ? 'partial' : 'full'
+          room.students.length < room.capacity ? 'partial' : 'full'
       }));
 
       // Apply filters
@@ -2948,19 +2948,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get unique hostels
-      const hostels = [...new Set(rooms.map(r => r.hostelName))];
+      const hostels = Array.from(new Set(rooms.map(r => r.hostelName)));
 
       res.json({ rooms, hostels });
     } catch (error: any) {
       console.error("[DEAN ROOMS ERROR]", error);
-      res.status(500).json({ error: error.message });
+      // Return empty rooms array instead of error
+      res.json({
+        rooms: [],
+        hostels: [],
+        message: "Unable to fetch rooms at this time. Please try again later."
+      });
     }
   });
 
   // Get room details with full student information
   app.get("/api/dean/rooms/:hostel/:roomNumber", authMiddleware, async (req: AuthRequest, res) => {
     const user = req.user!;
-    
+
     if (!['deanLadies', 'deanMen'].includes(user.role)) {
       return res.status(403).json({ error: "Insufficient permissions" });
     }
@@ -2976,7 +2981,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const allResidences = await residencesResponse.json();
       const residences = (await filterByGender(allResidences, user.role))
-        .filter((r: any) => 
+        .filter((r: any) =>
           r.residenceType === 'on-campus' &&
           r.hostelName === hostel &&
           r.roomNumber === roomNumber
@@ -3034,7 +3039,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all students for residence dean
   app.get("/api/dean/students", authMiddleware, async (req: AuthRequest, res) => {
     const user = req.user!;
-    
+
     if (!['deanLadies', 'deanMen'].includes(user.role)) {
       return res.status(403).json({ error: "Insufficient permissions" });
     }
@@ -3103,14 +3108,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ students: validStudents });
     } catch (error: any) {
       console.error("[DEAN STUDENTS ERROR]", error);
-      res.status(500).json({ error: error.message });
+      // Return empty students array instead of error to prevent frontend crash
+      res.json({
+        students: [],
+        message: "Unable to fetch students at this time. Please try again later."
+      });
     }
   });
 
   // Get analytics data for residence dean
   app.get("/api/dean/analytics", authMiddleware, async (req: AuthRequest, res) => {
     const user = req.user!;
-    
+
     if (!['deanLadies', 'deanMen'].includes(user.role)) {
       return res.status(403).json({ error: "Insufficient permissions" });
     }
@@ -3203,7 +3212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============ DEAN RESIDENCE MANAGEMENT ENDPOINTS ============
-  
+
   // Get all hostels (gender-filtered for dean)
   app.get("/api/dean/hostels", authMiddleware, requireRole("deanLadies", "deanMen"), async (req: AuthRequest, res) => {
     const user = req.user!;
@@ -3211,15 +3220,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const EXTERNAL_URL = process.env.VITE_STUDENT_API_URL || 'https://studedatademo.azurewebsites.net';
-      
+
       // Fetch all hostels
       const hostelsResponse = await fetch(`${EXTERNAL_URL}/api/hostels`);
       if (!hostelsResponse.ok) {
         throw new Error(`External API error: ${hostelsResponse.status}`);
       }
-      
+
       const allHostels = await hostelsResponse.json();
-      
+
       // Filter hostels by gender and fetch details
       const hostelDetailsPromises = allHostels
         .filter((hostel: any) => hostel.gender?.toLowerCase() === targetGender)
@@ -3227,15 +3236,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           try {
             const detailsResponse = await fetch(`${EXTERNAL_URL}/api/hostels/${hostel.id}`);
             if (!detailsResponse.ok) return null;
-            
+
             const details = await detailsResponse.json();
-            
+
             // Calculate statistics from rooms
             const totalCapacity = details.rooms?.reduce((sum: number, room: any) => sum + (room.capacity || 0), 0) || 0;
             const totalOccupied = details.rooms?.reduce((sum: number, room: any) => sum + (room.currentOccupancy || 0), 0) || 0;
             const totalAvailable = totalCapacity - totalOccupied;
             const occupancyRate = totalCapacity > 0 ? Math.round((totalOccupied / totalCapacity) * 100) : 0;
-            
+
             return {
               id: hostel.id,
               name: hostel.name,
@@ -3252,10 +3261,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return null;
           }
         });
-      
+
       const hostelDetails = await Promise.all(hostelDetailsPromises);
       const filteredHostels = hostelDetails.filter(h => h !== null);
-      
+
       res.json(filteredHostels);
     } catch (error: any) {
       console.error("[DEAN HOSTELS ERROR]", error);
@@ -3271,27 +3280,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const EXTERNAL_URL = process.env.VITE_STUDENT_API_URL || 'https://studedatademo.azurewebsites.net';
-      
+
       // Fetch hostel details
       const hostelResponse = await fetch(`${EXTERNAL_URL}/api/hostels/${hostelId}`);
       if (!hostelResponse.ok) {
         return res.status(404).json({ error: "Hostel not found" });
       }
-      
+
       const hostelDetails = await hostelResponse.json();
-      
+
       // Check if hostel matches dean's gender
       if (hostelDetails.gender?.toLowerCase() !== targetGender) {
         return res.status(403).json({ error: "Access denied to this hostel" });
       }
-      
+
       // Fetch all residences to find students in this hostel
       const residencesResponse = await fetch(`${EXTERNAL_URL}/api/residences`);
       const allResidences = residencesResponse.ok ? await residencesResponse.json() : [];
-      
+
       // Filter residences for this hostel
       const hostelResidences = allResidences.filter((r: any) => r.hostelId === hostelId);
-      
+
       // Fetch student details for each residence
       const studentsPromises = hostelResidences.map(async (residence: any) => {
         try {
@@ -3307,60 +3316,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return null;
         }
       });
-      
+
       const students = (await Promise.all(studentsPromises)).filter(s => s !== null);
-      
-      // Calculate statistics
+
+      console.log(`[DEAN HOSTEL DETAILS] Hostel ${hostelId} - Found ${students.length} students`);
+      if (students.length > 0) {
+        console.log(`[DEAN HOSTEL DETAILS] Sample student roomNumber:`, students[0].roomNumber);
+      }
+
+      // Calculate statistics and add students to each room
       const totalCapacity = hostelDetails.rooms?.reduce((sum: number, room: any) => sum + (room.capacity || 0), 0) || 0;
       const totalOccupied = hostelDetails.rooms?.reduce((sum: number, room: any) => sum + (room.currentOccupancy || 0), 0) || 0;
-      
+
+      console.log(`[DEAN HOSTEL DETAILS] Total rooms: ${hostelDetails.rooms?.length}, Sample room:`, hostelDetails.rooms?.[0]?.roomNumber);
+
+      // Nest students within their respective rooms
+      const roomsWithStudents = (hostelDetails.rooms || []).map((room: any) => {
+        const roomStudents = students.filter((s: any) => s.roomNumber === room.roomNumber);
+        if (roomStudents.length > 0) {
+          console.log(`[DEAN HOSTEL DETAILS] Room ${room.roomNumber} has ${roomStudents.length} students`);
+        }
+        return {
+          ...room,
+          occupiedBeds: room.currentOccupancy || 0,
+          availableBeds: (room.capacity || 0) - (room.currentOccupancy || 0),
+          students: roomStudents
+        };
+      });
+
       res.json({
         id: hostelDetails.id,
         name: hostelDetails.name,
         capacity: totalCapacity,
         occupiedBeds: totalOccupied,
         availableBeds: totalCapacity - totalOccupied,
-        occupancyRate: totalCapacity > 0 
-          ? Math.round((totalOccupied / totalCapacity) * 100) 
+        occupancyRate: totalCapacity > 0
+          ? Math.round((totalOccupied / totalCapacity) * 100)
           : 0,
         totalRooms: hostelDetails.rooms?.length || 0,
-        rooms: hostelDetails.rooms || [],
+        rooms: roomsWithStudents,
         students: students,
         gender: targetGender,
         location: hostelDetails.location
       });
     } catch (error: any) {
       console.error("[DEAN HOSTEL DETAILS ERROR]", error);
-      res.status(500).json({ error: error.message });
+      // Return empty structure instead of error
+      res.json({
+        id: parseInt(req.params.id),
+        name: "Unknown Hostel",
+        capacity: 0,
+        occupiedBeds: 0,
+        availableBeds: 0,
+        occupancyRate: 0,
+        totalRooms: 0,
+        rooms: [],
+        students: [],
+        gender: targetGender,
+        location: "",
+        message: "Unable to fetch hostel details. Please try again later."
+      });
     }
   });
 
   // Get available rooms in a hostel
   app.get("/api/dean/hostels/:id/available-rooms", authMiddleware, requireRole("deanLadies", "deanMen"), async (req: AuthRequest, res) => {
     const user = req.user!;
-    const targetGender = user.role === 'deanLadies' ? 'Female' : 'Male';
-    const hostelId = req.params.id;
+    const targetGender = user.role === 'deanLadies' ? 'female' : 'male';
+    const hostelId = parseInt(req.params.id);
 
     try {
       const EXTERNAL_URL = process.env.VITE_STUDENT_API_URL || 'https://studedatademo.azurewebsites.net';
-      
-      // Fetch available rooms from external API
-      const availableRoomsResponse = await fetch(`${EXTERNAL_URL}/api/hostels/${hostelId}/available-rooms`);
-      if (!availableRoomsResponse.ok) {
-        return res.status(404).json({ error: "Hostel not found" });
+
+      // Fetch hostel details with rooms
+      const hostelResponse = await fetch(`${EXTERNAL_URL}/api/hostels/${hostelId}`);
+      if (!hostelResponse.ok) {
+        console.warn(`[DEAN AVAILABLE ROOMS] Hostel ${hostelId} not found`);
+        return res.json({
+          hostelId: hostelId.toString(),
+          gender: targetGender,
+          availableRooms: [],
+          message: "Hostel not found"
+        });
       }
-      
-      const availableRooms = await availableRoomsResponse.json();
-      
-      // Return all available rooms (gender separation is handled by hostel assignment)
+
+      const hostelDetails = await hostelResponse.json();
+
+      // Check if hostel matches dean's gender
+      if (hostelDetails.gender?.toLowerCase() !== targetGender) {
+        return res.status(403).json({ error: "Access denied to this hostel" });
+      }
+
+      // Fetch all residences to find occupied beds
+      const residencesResponse = await fetch(`${EXTERNAL_URL}/api/residences`);
+      const allResidences = residencesResponse.ok ? await residencesResponse.json() : [];
+
+      // Filter residences for this hostel
+      const hostelResidences = allResidences.filter((r: any) => r.hostelId === hostelId);
+
+      // Build available rooms list
+      const availableRooms = hostelDetails.rooms
+        ?.filter((room: any) => room.status === 'available' && room.currentOccupancy < room.capacity)
+        .map((room: any) => {
+          // Find which beds are occupied in this room
+          const occupiedBedsInRoom = hostelResidences
+            .filter((r: any) => r.roomId === room.id)
+            .map((r: any) => r.bedNumber);
+
+          // Generate all possible bed names for this room
+          const allBeds = Array.from({ length: room.capacity }, (_, i) =>
+            `Bed ${String.fromCharCode(65 + i)}` // Bed A, Bed B, Bed C, Bed D
+          );
+
+          // Find available beds
+          const availableBeds = allBeds.filter(bed => !occupiedBedsInRoom.includes(bed));
+
+          return {
+            roomId: room.id,
+            roomNumber: room.roomNumber,
+            roomType: room.roomType,
+            availableBeds: availableBeds,
+            totalBedsInRoom: room.capacity,
+            currentOccupancy: room.currentOccupancy
+          };
+        })
+        .filter((room: any) => room.availableBeds.length > 0) || [];
+
       res.json({
-        hostelId,
+        hostelId: hostelId.toString(),
         gender: targetGender,
         availableRooms
       });
     } catch (error: any) {
       console.error("[DEAN AVAILABLE ROOMS ERROR]", error);
-      res.status(500).json({ error: error.message });
+      // Return empty available rooms instead of error
+      res.json({
+        hostelId: req.params.id,
+        gender: targetGender,
+        availableRooms: [],
+        message: "Unable to fetch available rooms. Please try again later."
+      });
     }
   });
 
@@ -3372,24 +3467,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const EXTERNAL_URL = process.env.VITE_STUDENT_API_URL || 'https://studedatademo.azurewebsites.net';
-      
+
       // Fetch booking requests with status filter
       const bookingsResponse = await fetch(`${EXTERNAL_URL}/api/residences/bookings?status=${status}`);
+
+      // If external API fails or returns error, return empty bookings
       if (!bookingsResponse.ok) {
-        throw new Error(`External API error: ${bookingsResponse.status}`);
+        console.warn(`[DEAN BOOKINGS] External API returned ${bookingsResponse.status}. Returning empty bookings.`);
+        return res.json({
+          bookings: [],
+          total: 0,
+          status,
+          gender: targetGender,
+          message: "No booking requests at this time"
+        });
       }
-      
+
       const allBookings = await bookingsResponse.json();
-      
+
+      // Check if response is an error object
+      if (allBookings.error) {
+        console.warn(`[DEAN BOOKINGS] External API error: ${allBookings.error}. Returning empty bookings.`);
+        return res.json({
+          bookings: [],
+          total: 0,
+          status,
+          gender: targetGender,
+          message: "No booking requests at this time"
+        });
+      }
+
+      // Ensure allBookings is an array
+      const bookingsArray = Array.isArray(allBookings) ? allBookings : [];
+
       // For each booking, fetch student details to check gender
       const bookingsWithStudentInfo = await Promise.all(
-        allBookings.map(async (booking: any) => {
+        bookingsArray.map(async (booking: any) => {
           try {
             const studentResponse = await fetch(`${EXTERNAL_URL}/api/students/${booking.studentId}`);
             if (!studentResponse.ok) return null;
-            
+
             const student = await studentResponse.json();
-            
+
             // Only return bookings for target gender
             if (student.gender === targetGender) {
               return {
@@ -3409,9 +3528,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         })
       );
-      
+
       const filteredBookings = bookingsWithStudentInfo.filter(b => b !== null);
-      
+
       res.json({
         bookings: filteredBookings,
         total: filteredBookings.length,
@@ -3420,7 +3539,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error("[DEAN BOOKINGS ERROR]", error);
-      res.status(500).json({ error: error.message });
+      // Return empty bookings instead of error to prevent frontend crash
+      res.json({
+        bookings: [],
+        total: 0,
+        status,
+        gender: targetGender,
+        message: "Error fetching bookings. Please try again later."
+      });
     }
   });
 
@@ -3438,34 +3564,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const EXTERNAL_URL = process.env.VITE_STUDENT_API_URL || 'https://studedatademo.azurewebsites.net';
-      
+
       // First, verify the booking belongs to a student of the correct gender
       const bookingsResponse = await fetch(`${EXTERNAL_URL}/api/residences/bookings`);
       if (!bookingsResponse.ok) {
         throw new Error(`External API error: ${bookingsResponse.status}`);
       }
-      
+
       const allBookings = await bookingsResponse.json();
       const booking = allBookings.find((b: any) => b.id === parseInt(bookingId));
-      
+
       if (!booking) {
         return res.status(404).json({ error: "Booking not found" });
       }
-      
+
       // Check student gender
       const studentResponse = await fetch(`${EXTERNAL_URL}/api/students/${booking.studentId}`);
       if (!studentResponse.ok) {
         return res.status(404).json({ error: "Student not found" });
       }
-      
+
       const student = await studentResponse.json();
-      
+
       if (student.gender !== targetGender) {
-        return res.status(403).json({ 
-          error: `Access denied. You can only manage bookings for ${targetGender.toLowerCase()} students.` 
+        return res.status(403).json({
+          error: `Access denied. You can only manage bookings for ${targetGender.toLowerCase()} students.`
         });
       }
-      
+
       // Approve/reject the booking
       const approvalResponse = await fetch(`${EXTERNAL_URL}/api/residences/bookings/${bookingId}/approve`, {
         method: 'PUT',
@@ -3476,14 +3602,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           note: note || `${status === 'approved' ? 'Approved' : 'Rejected'} by ${user.role === 'deanLadies' ? 'Ladies Dean' : 'Men Dean'}`
         })
       });
-      
+
       if (!approvalResponse.ok) {
         const errorData = await approvalResponse.json();
         throw new Error(errorData.error || 'Failed to update booking');
       }
-      
+
       const updatedBooking = await approvalResponse.json();
-      
+
       res.json({
         success: true,
         booking: {
@@ -3507,56 +3633,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Validate required fields
     if (!studentId || !hostelId || !roomId || !bedNumber) {
-      return res.status(400).json({ 
-        error: "Missing required fields: studentId, hostelId, roomId, bedNumber" 
+      return res.status(400).json({
+        error: "Missing required fields: studentId, hostelId, roomId, bedNumber"
       });
     }
 
     try {
       const EXTERNAL_URL = process.env.VITE_STUDENT_API_URL || 'https://studedatademo.azurewebsites.net';
-      
+
       // First, verify the student's gender
       const studentResponse = await fetch(`${EXTERNAL_URL}/api/students/${studentId}`);
       if (!studentResponse.ok) {
         return res.status(404).json({ error: "Student not found" });
       }
-      
+
       const student = await studentResponse.json();
-      
+
       if (student.gender !== targetGender) {
-        return res.status(403).json({ 
-          error: `Access denied. You can only allocate rooms for ${targetGender.toLowerCase()} students.` 
+        return res.status(403).json({
+          error: `Access denied. You can only allocate rooms for ${targetGender.toLowerCase()} students.`
         });
       }
-      
+
       // Check if student already has a residence
       const existingResidenceResponse = await fetch(`${EXTERNAL_URL}/api/residences/student/${studentId}`);
       if (existingResidenceResponse.ok) {
         const existingResidence = await existingResidenceResponse.json();
         if (existingResidence && existingResidence.residenceType === 'on-campus') {
-          return res.status(400).json({ 
-            error: "Student already has a room allocation. Please deallocate first." 
+          return res.status(400).json({
+            error: "Student already has a room allocation. Please deallocate first."
           });
         }
       }
-      
+
       // Verify the hostel and room are appropriate for the gender
       const hostelResponse = await fetch(`${EXTERNAL_URL}/api/hostels/${hostelId}`);
       if (!hostelResponse.ok) {
         return res.status(404).json({ error: "Hostel not found" });
       }
-      
+
       const hostelDetails = await hostelResponse.json();
       const room = hostelDetails.rooms?.find((r: any) => r.id === parseInt(roomId));
-      
+
       if (!room) {
         return res.status(404).json({ error: "Room not found" });
       }
-      
+
       if (room.availableBeds <= 0) {
         return res.status(400).json({ error: "No available beds in this room" });
       }
-      
+
       // Create the residence allocation
       const allocationResponse = await fetch(`${EXTERNAL_URL}/api/residences`, {
         method: 'POST',
@@ -3572,14 +3698,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           allocatedAt: new Date().toISOString()
         })
       });
-      
+
       if (!allocationResponse.ok) {
         const errorData = await allocationResponse.json();
         throw new Error(errorData.error || 'Failed to allocate room');
       }
-      
+
       const allocation = await allocationResponse.json();
-      
+
       res.json({
         success: true,
         allocation: {
@@ -3605,43 +3731,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const EXTERNAL_URL = process.env.VITE_STUDENT_API_URL || 'https://studedatademo.azurewebsites.net';
-      
+
       // First, verify the student's gender
       const studentResponse = await fetch(`${EXTERNAL_URL}/api/students/${studentId}`);
       if (!studentResponse.ok) {
         return res.status(404).json({ error: "Student not found" });
       }
-      
+
       const student = await studentResponse.json();
-      
+
       if (student.gender !== targetGender) {
-        return res.status(403).json({ 
-          error: `Access denied. You can only deallocate rooms for ${targetGender.toLowerCase()} students.` 
+        return res.status(403).json({
+          error: `Access denied. You can only deallocate rooms for ${targetGender.toLowerCase()} students.`
         });
       }
-      
+
       // Check if student has a residence
       const residenceResponse = await fetch(`${EXTERNAL_URL}/api/residences/student/${studentId}`);
       if (!residenceResponse.ok) {
         return res.status(404).json({ error: "Student has no room allocation" });
       }
-      
+
       const residence = await residenceResponse.json();
-      
+
       if (residence.residenceType !== 'on-campus') {
         return res.status(400).json({ error: "Student is not in on-campus housing" });
       }
-      
+
       // Deallocate the student
       const deallocateResponse = await fetch(`${EXTERNAL_URL}/api/residences/${studentId}`, {
         method: 'DELETE'
       });
-      
+
       if (!deallocateResponse.ok) {
         const errorData = await deallocateResponse.json();
         throw new Error(errorData.error || 'Failed to deallocate room');
       }
-      
+
       res.json({
         success: true,
         message: `Successfully deallocated ${student.firstName} ${student.lastName} from ${residence.hostelName} - ${residence.roomNumber}`,

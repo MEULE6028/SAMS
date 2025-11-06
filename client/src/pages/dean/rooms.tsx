@@ -4,17 +4,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface Room {
-  id: number;
+  id?: number;
   hostelName: string;
   roomNumber: string;
   capacity: number;
-  occupiedBeds: number;
+  currentOccupancy?: number;
+  occupiedBeds?: number;
   availableBeds: number;
   status: string;
 }
 
+interface RoomsResponse {
+  rooms: Room[];
+  hostels: string[];
+}
+
 export default function RoomsPage() {
-  const { data, isLoading } = useQuery<Room[]>({
+  const { data, isLoading } = useQuery<RoomsResponse>({
     queryKey: ["/api/dean/rooms"],
     queryFn: async () => await apiRequest("GET", "/api/dean/rooms"),
   });
@@ -31,30 +37,36 @@ export default function RoomsPage() {
           <CardTitle>Rooms</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Hostel</TableHead>
-                <TableHead>Room</TableHead>
-                <TableHead>Capacity</TableHead>
-                <TableHead>Occupied</TableHead>
-                <TableHead>Available</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data?.map((room) => (
-                <TableRow key={room.id}>
-                  <TableCell>{room.hostelName}</TableCell>
-                  <TableCell className="font-medium">{room.roomNumber}</TableCell>
-                  <TableCell>{room.capacity}</TableCell>
-                  <TableCell>{room.occupiedBeds}</TableCell>
-                  <TableCell>{room.availableBeds}</TableCell>
-                  <TableCell className="capitalize">{room.status}</TableCell>
+          {isLoading ? (
+            <div className="text-center py-8 text-muted-foreground">Loading rooms...</div>
+          ) : data?.rooms?.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No rooms found</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Hostel</TableHead>
+                  <TableHead>Room</TableHead>
+                  <TableHead>Capacity</TableHead>
+                  <TableHead>Occupied</TableHead>
+                  <TableHead>Available</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {data?.rooms?.map((room, index) => (
+                  <TableRow key={`${room.hostelName}-${room.roomNumber}-${index}`}>
+                    <TableCell>{room.hostelName}</TableCell>
+                    <TableCell className="font-medium">{room.roomNumber}</TableCell>
+                    <TableCell>{room.capacity}</TableCell>
+                    <TableCell>{room.currentOccupancy || room.occupiedBeds || 0}</TableCell>
+                    <TableCell>{room.availableBeds}</TableCell>
+                    <TableCell className="capitalize">{room.status}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>

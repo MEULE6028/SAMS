@@ -63,7 +63,7 @@ async function createResidenceDeans() {
   console.log("\n📝 Login Credentials:");
   console.log("Ladies Dean: deanladies@on-campus.ueab.ac.ke / password123");
   console.log("Men Dean: deanmen@on-campus.ueab.ac.ke / password123");
-  
+
   process.exit(0);
 }
 
