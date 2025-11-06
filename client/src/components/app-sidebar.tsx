@@ -2,6 +2,7 @@ import {
   Building2,
   Briefcase,
   CreditCard,
+  DollarSign,
   Home,
   Users,
   Vote,
@@ -9,6 +10,11 @@ import {
   Clock,
   TrendingUp,
   LogOut,
+  BedDouble,
+  Activity,
+  Wallet,
+  MapPin,
+  Settings,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
@@ -40,6 +46,15 @@ const menuItems = {
     { title: "Dashboard", url: "/dashboard", icon: Home },
     { title: "Analytics", url: "/analytics", icon: TrendingUp },
   ],
+  student: [
+    { title: "My Dashboard", url: "/dashboard", icon: Home },
+    { title: "Hostel & Residence", url: "/hostel", icon: BedDouble },
+    { title: "Attendance Records", url: "/attendance", icon: Activity },
+    { title: "Work Study", url: "/work-study", icon: Briefcase },
+    { title: "Elections", url: "/elections", icon: Vote },
+    { title: "My Wallet", url: "/wallet", icon: Wallet },
+    { title: "Sign-Out Requests", url: "/sign-out", icon: MapPin },
+  ],
   chapa360: [
     { title: "My Account", url: "/chapa360/account", icon: CreditCard },
     { title: "Transactions", url: "/chapa360/transactions", icon: FileText },
@@ -49,27 +64,46 @@ const menuItems = {
     { title: "Timecards", url: "/swsms/timecards", icon: Clock },
   ],
   sgms: [
-    { title: "Elections", url: "/sgms/elections", icon: Vote },
     { title: "Handovers", url: "/sgms/handovers", icon: Users },
   ],
 };
 
 const adminItems = {
-  chapa360: [
-    { title: "All Accounts", url: "/admin/chapa360/accounts", icon: CreditCard },
+  overview: [
+    { title: "Dashboard", url: "/admin/dashboard", icon: Home },
+    { title: "Accounts Management", url: "/admin/accounts", icon: Users },
+    { title: "Analytics & Reports", url: "/admin/analytics", icon: TrendingUp },
   ],
   swsms: [
     { title: "Vetting Dashboard", url: "/admin/swsms/vetting", icon: Briefcase },
     { title: "All Timecards", url: "/admin/swsms/timecards", icon: Clock },
+    { title: "Department Rates", url: "/admin/swsms/department-rates", icon: DollarSign },
   ],
   sgms: [
     { title: "Manage Elections", url: "/admin/sgms/elections", icon: Vote },
   ],
 };
 
+const wSupervisorItems = [
+  { title: "Dashboard", url: "/wsupervisor/dashboard", icon: Home },
+  { title: "Applications", url: "/wsupervisor/applications", icon: FileText },
+  { title: "Timecards", url: "/wsupervisor/timecards", icon: Clock },
+  { title: "Departments", url: "/wsupervisor/departments", icon: Building2 },
+  { title: "Department Rates", url: "/admin/swsms/department-rates", icon: DollarSign },
+];
+
+const supervisorItems = [
+  { title: "Dashboard", url: "/supervisor/dashboard", icon: Home },
+  { title: "Timecards", url: "/supervisor/timecards", icon: Clock },
+];
+
 export function AppSidebar({ user, onLogout }: AppSidebarProps) {
   const [location] = useLocation();
-  const isAdmin = user?.role === "admin" || user?.role === "supervisor" || user?.role === "treasurer";
+
+  const isAdmin = user?.role === "admin" || user?.role === "treasurer";
+  const isSupervisor = user?.role === "supervisor";
+  const isWSupervisor = user?.role === "wSupervisor";
+  const isStudent = user?.role === "student";
 
   return (
     <Sidebar>
@@ -86,77 +120,167 @@ export function AppSidebar({ user, onLogout }: AppSidebarProps) {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Main</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.main.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location === item.url}>
-                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {isStudent ? (
+          <SidebarGroup>
+            <SidebarGroupLabel>Student Portal</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {menuItems.student.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={location === item.url}>
+                      <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : (
+          <>
+            {isAdmin && (
+              <SidebarGroup>
+                <SidebarGroupLabel>Admin Overview</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {adminItems.overview.map((item) => (
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton asChild isActive={location === item.url}>
+                          <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
 
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-ueab-blue">Chapa360 Finance</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {(isAdmin ? adminItems.chapa360 : menuItems.chapa360).map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location === item.url}>
-                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+            {isWSupervisor && (
+              <SidebarGroup>
+                <SidebarGroupLabel>Work Study Oversight</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {wSupervisorItems.map((item) => (
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton asChild isActive={location === item.url}>
+                          <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
 
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-ueab-blue">SWSMS Work Study</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {(isAdmin ? [...menuItems.swsms, ...adminItems.swsms] : menuItems.swsms).map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location === item.url}>
-                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+            {isSupervisor && (
+              <SidebarGroup>
+                <SidebarGroupLabel>Department Supervision</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {supervisorItems.map((item) => (
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton asChild isActive={location === item.url}>
+                          <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
 
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-ueab-gold">SGMS Governance</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {(isAdmin ? [...menuItems.sgms, ...adminItems.sgms] : menuItems.sgms).map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location === item.url}>
-                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+            {!isAdmin && !isWSupervisor && !isSupervisor && (
+              <SidebarGroup>
+                <SidebarGroupLabel>Main</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {menuItems.main.map((item) => (
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton asChild isActive={location === item.url}>
+                          <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
+
+            {!isAdmin && !isWSupervisor && !isSupervisor && (
+              <SidebarGroup>
+                <SidebarGroupLabel className="text-ueab-blue">Chapa360 Finance</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {menuItems.chapa360.map((item) => (
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton asChild isActive={location === item.url}>
+                          <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
+
+            {!isWSupervisor && !isSupervisor && (
+              <SidebarGroup>
+                <SidebarGroupLabel className="text-ueab-blue">SWSMS Work Study</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {(isAdmin ? [...menuItems.swsms, ...adminItems.swsms] : menuItems.swsms).map((item) => (
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton asChild isActive={location === item.url}>
+                          <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
+
+            {!isWSupervisor && !isSupervisor && (
+              <SidebarGroup>
+                <SidebarGroupLabel className="text-ueab-gold">SGMS Governance</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {(isAdmin ? [...menuItems.sgms, ...adminItems.sgms] : menuItems.sgms).map((item) => (
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton asChild isActive={location === item.url}>
+                          <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
+          </>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-4">

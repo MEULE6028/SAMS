@@ -1,0 +1,1 @@
+ALTER TABLE "work_applications" ADD COLUMN "academic_semester" text;

@@ -8,6 +8,48 @@
       "when": 1761302624700,
       "tag": "0000_nappy_mantis",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1761703647448,
+      "tag": "0001_high_swordsman",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1761980049278,
+      "tag": "0002_condemned_tarot",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1762074473504,
+      "tag": "0003_spotty_squadron_sinister",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1762156145774,
+      "tag": "0004_white_zzzax",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1762315383578,
+      "tag": "0005_lethal_sue_storm",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1762316672792,
+      "tag": "0006_even_medusa",
+      "breakpoints": true
     }
   ]
 }

@@ -13,11 +13,23 @@ interface AuthState {
 export function getDashboardRoute(user: User | null): string {
   if (!user) return '/login';
 
-  const adminRoles = ['admin', 'supervisor', 'treasurer', 'vc'];
-  if (adminRoles.includes(user.role)) {
-    return '/admin/chapa360/accounts';
+  // wSupervisor role has its own dashboard (program-wide oversight)
+  if (user.role === 'wSupervisor') {
+    return '/wsupervisor/dashboard';
   }
 
+  // Department supervisors (HODs) have their own dashboard
+  if (user.role === 'supervisor') {
+    return '/supervisor/dashboard';
+  }
+
+  // Admin roles (admin, treasurer, vc) go to admin dashboard
+  const adminRoles = ['admin', 'treasurer', 'vc'];
+  if (adminRoles.includes(user.role)) {
+    return '/admin/dashboard';
+  }
+
+  // Default student dashboard
   return '/dashboard';
 }
 

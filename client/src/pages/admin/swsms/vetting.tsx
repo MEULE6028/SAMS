@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Briefcase, CheckCircle, XCircle, Clock } from "lucide-react";
+import { Briefcase, CheckCircle, XCircle, Clock, AlertCircle, FileText, Eye } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,9 +14,11 @@ export default function VettingDashboard() {
   const { toast } = useToast();
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
 
-  const { data: applications, isLoading } = useQuery({
+  const { data, isLoading } = useQuery<any>({
     queryKey: ["/api/admin/swsms/applications"],
   });
+
+  const applications = data?.applications || [];
 
   const reviewMutation = useMutation({
     mutationFn: ({ id, status, notes }: { id: string; status: string; notes: string }) =>
@@ -40,6 +42,10 @@ export default function VettingDashboard() {
 
   const statusConfig = {
     pending: { icon: Clock, color: "bg-chart-5/20 text-chart-5" },
+    under_review: { icon: Eye, color: "bg-blue-500/20 text-blue-600" },
+    auto_rejected: { icon: XCircle, color: "bg-orange-500/20 text-orange-600" },
+    appealed: { icon: FileText, color: "bg-purple-500/20 text-purple-600" },
+    supervisor_review: { icon: AlertCircle, color: "bg-yellow-500/20 text-yellow-600" },
     approved: { icon: CheckCircle, color: "bg-chart-4/20 text-chart-4" },
     rejected: { icon: XCircle, color: "bg-destructive/20 text-destructive" },
   };

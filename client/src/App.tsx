@@ -8,6 +8,9 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { useAuth, getDashboardRoute } from "@/lib/auth";
+import { useEffect } from "react";
+import { useTokenRefresh } from "@/hooks/use-token-refresh";
+import { useToast } from "@/hooks/use-toast";
 
 import NotFound from "@/pages/not-found";
 import LoginPage from "@/pages/login";
@@ -18,19 +21,69 @@ import Chapa360AccountPage from "@/pages/chapa360/account";
 import TransactionsPage from "@/pages/chapa360/transactions";
 import WorkApplicationsPage from "@/pages/swsms/applications";
 import TimecardsPage from "@/pages/swsms/timecards";
-import ElectionsPage from "@/pages/sgms/elections";
 import HandoversPage from "@/pages/sgms/handovers";
+import AdminDashboard from "@/pages/admin/dashboard";
+import AdminAccountsManagementPage from "@/pages/admin/accounts";
+import AdminAnalyticsPage from "@/pages/admin/analytics";
 import VettingDashboard from "@/pages/admin/swsms/vetting";
-import AdminAccountsPage from "@/pages/admin/chapa360/accounts";
 import AdminTimecardsPage from "@/pages/admin/swsms/timecards";
+import DepartmentRatesPage from "@/pages/admin/swsms/department-rates";
 import AdminElectionsPage from "@/pages/admin/sgms/elections";
+import WSupervisorDashboard from "@/pages/wsupervisor/dashboard";
+import WSupervisorApplications from "@/pages/wsupervisor/applications";
+import WSupervisorTimecards from "@/pages/wsupervisor/timecards";
+import WSupervisorDepartments from "@/pages/wsupervisor/departments";
+import SupervisorDashboard from "@/pages/supervisor/dashboard";
+import SupervisorTimecards from "@/pages/supervisor/timecards";
+import StudentDashboard from "@/pages/demo/student-dashboard";
+import StudentElectionsPage from "@/pages/student/elections";
+import AppointmentsPage from "@/pages/student/appointments";
+import HostelPage from "@/pages/student/hostel";
+import ResidenceRecordsPage from "@/pages/student/residence-records";
+import AttendancePage from "@/pages/student/attendance";
+import WorkStudyPage from "@/pages/student/work-study";
+import WalletPage from "@/pages/student/wallet";
+import SignOutPage from "@/pages/student/sign-out";
 
 function ProtectedRoute({ component: Component }: { component: () => JSX.Element }) {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
+  useEffect(() => {
+    if (!user) {
+      setLocation("/login");
+    }
+  }, [user, setLocation]);
+
   if (!user) {
-    setLocation("/login");
+    return null;
+  }
+
+  return <Component />;
+}
+
+function StudentRoute({ component: Component }: { component: () => JSX.Element }) {
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!user) {
+      setLocation("/login");
+    } else {
+      const adminRoles = ['admin', 'supervisor', 'treasurer', 'vc'];
+      if (adminRoles.includes(user.role)) {
+        // Redirect admin users to admin dashboard
+        setLocation("/admin/dashboard");
+      }
+    }
+  }, [user, setLocation]);
+
+  if (!user) {
+    return null;
+  }
+
+  const adminRoles = ['admin', 'supervisor', 'treasurer', 'vc'];
+  if (adminRoles.includes(user.role)) {
     return null;
   }
 
@@ -41,9 +94,14 @@ function PublicRoute({ component: Component }: { component: () => JSX.Element })
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
+  useEffect(() => {
+    if (user) {
+      const dashboardRoute = getDashboardRoute(user);
+      setLocation(dashboardRoute);
+    }
+  }, [user, setLocation]);
+
   if (user) {
-    const dashboardRoute = getDashboardRoute(user);
-    setLocation(dashboardRoute);
     return null;
   }
 
@@ -62,7 +120,7 @@ function Router() {
         <PublicRoute component={RegisterPage} />
       </Route>
       <Route path="/dashboard">
-        <ProtectedRoute component={Dashboard} />
+        <StudentRoute component={Dashboard} />
       </Route>
       <Route path="/analytics">
         <ProtectedRoute component={AnalyticsPage} />
@@ -79,14 +137,41 @@ function Router() {
       <Route path="/swsms/timecards">
         <ProtectedRoute component={TimecardsPage} />
       </Route>
-      <Route path="/sgms/elections">
-        <ProtectedRoute component={ElectionsPage} />
+      <Route path="/elections">
+        <ProtectedRoute component={StudentElectionsPage} />
+      </Route>
+      <Route path="/appointments">
+        <ProtectedRoute component={AppointmentsPage} />
+      </Route>
+      <Route path="/hostel">
+        <ProtectedRoute component={HostelPage} />
+      </Route>
+      <Route path="/residence-records">
+        <ProtectedRoute component={ResidenceRecordsPage} />
+      </Route>
+      <Route path="/attendance">
+        <ProtectedRoute component={AttendancePage} />
+      </Route>
+      <Route path="/work-study">
+        <ProtectedRoute component={WorkStudyPage} />
+      </Route>
+      <Route path="/wallet">
+        <ProtectedRoute component={WalletPage} />
+      </Route>
+      <Route path="/sign-out">
+        <ProtectedRoute component={SignOutPage} />
       </Route>
       <Route path="/sgms/handovers">
         <ProtectedRoute component={HandoversPage} />
       </Route>
-      <Route path="/admin/chapa360/accounts">
-        <ProtectedRoute component={AdminAccountsPage} />
+      <Route path="/admin/dashboard">
+        <ProtectedRoute component={AdminDashboard} />
+      </Route>
+      <Route path="/admin/accounts">
+        <ProtectedRoute component={AdminAccountsManagementPage} />
+      </Route>
+      <Route path="/admin/analytics">
+        <ProtectedRoute component={AdminAnalyticsPage} />
       </Route>
       <Route path="/admin/swsms/vetting">
         <ProtectedRoute component={VettingDashboard} />
@@ -94,9 +179,41 @@ function Router() {
       <Route path="/admin/swsms/timecards">
         <ProtectedRoute component={AdminTimecardsPage} />
       </Route>
+      <Route path="/admin/swsms/department-rates">
+        <ProtectedRoute component={DepartmentRatesPage} />
+      </Route>
       <Route path="/admin/sgms/elections">
         <ProtectedRoute component={AdminElectionsPage} />
       </Route>
+
+      {/* wSupervisor Routes */}
+      <Route path="/wsupervisor">
+        <ProtectedRoute component={WSupervisorDashboard} />
+      </Route>
+      <Route path="/wsupervisor/dashboard">
+        <ProtectedRoute component={WSupervisorDashboard} />
+      </Route>
+      <Route path="/wsupervisor/applications">
+        <ProtectedRoute component={WSupervisorApplications} />
+      </Route>
+      <Route path="/wsupervisor/timecards">
+        <ProtectedRoute component={WSupervisorTimecards} />
+      </Route>
+      <Route path="/wsupervisor/departments">
+        <ProtectedRoute component={WSupervisorDepartments} />
+      </Route>
+
+      {/* Department Supervisor Routes */}
+      <Route path="/supervisor">
+        <ProtectedRoute component={SupervisorDashboard} />
+      </Route>
+      <Route path="/supervisor/dashboard">
+        <ProtectedRoute component={SupervisorDashboard} />
+      </Route>
+      <Route path="/supervisor/timecards">
+        <ProtectedRoute component={SupervisorTimecards} />
+      </Route>
+
       <Route path="/">
         {user ? <Redirect to={getDashboardRoute(user)} /> : <Redirect to="/login" />}
       </Route>
@@ -108,6 +225,27 @@ function Router() {
 function AppLayout() {
   const { user, logout } = useAuth();
   const [location] = useLocation();
+  const { toast } = useToast();
+
+  // Enable automatic token refresh for authenticated users
+  useTokenRefresh();
+
+  // Listen for token expiration events
+  useEffect(() => {
+    const handleTokenExpired = (event: CustomEvent) => {
+      toast({
+        title: "Session Expired",
+        description: event.detail.message || "Your session has expired. Please log in again.",
+        variant: "destructive",
+      });
+    };
+
+    window.addEventListener("token-expired", handleTokenExpired as EventListener);
+
+    return () => {
+      window.removeEventListener("token-expired", handleTokenExpired as EventListener);
+    };
+  }, [toast]);
 
   const isPublicRoute = location === "/login" || location === "/register";
 

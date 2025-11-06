@@ -1,9 +1,11 @@
-import jwt from "jsonwebtoken";
+import jwt, { type Secret, type SignOptions } from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import type { Request, Response, NextFunction } from "express";
 import type { User } from "@shared/schema";
 
-const JWT_SECRET = process.env.JWT_SECRET!;
+const JWT_SECRET: Secret = (process.env.JWT_SECRET ?? "") as Secret;
+const ACCESS_TOKEN_TTL = ((process.env.ACCESS_TOKEN_TTL ?? "15m") as unknown) as SignOptions["expiresIn"];
+const REFRESH_TOKEN_TTL = ((process.env.REFRESH_TOKEN_TTL ?? "7d") as unknown) as SignOptions["expiresIn"];
 
 if (!JWT_SECRET) {
   throw new Error("JWT_SECRET must be set in environment variables");
@@ -16,11 +18,26 @@ export interface AuthRequest extends Request {
   token?: string;
 }
 
+// Legacy: kept for compatibility if referenced elsewhere
 export function generateToken(user: User): string {
+  return generateAccessToken(user);
+}
+
+export function generateAccessToken(user: User): string {
+  const options: SignOptions = { expiresIn: ACCESS_TOKEN_TTL };
   return jwt.sign(
-    { id: user.id, email: user.email, role: user.role },
+    { id: user.id, email: user.email, role: user.role, type: "access" },
     JWT_SECRET,
-    { expiresIn: "7d" }
+    options
+  );
+}
+
+export function generateRefreshToken(user: User): string {
+  const options: SignOptions = { expiresIn: REFRESH_TOKEN_TTL };
+  return jwt.sign(
+    { id: user.id, email: user.email, role: user.role, type: "refresh" },
+    JWT_SECRET,
+    options
   );
 }
 
@@ -31,6 +48,27 @@ export function verifyToken(token: string): any {
     console.error("Token verification failed:", error instanceof Error ? error.message : error);
     return null;
   }
+}
+
+export function setRefreshTokenCookie(res: Response, token: string) {
+  const isProd = process.env.NODE_ENV === "production";
+  res.cookie("refreshToken", token, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? "strict" : "lax",
+    path: "/api/auth",
+    // maxAge is derived from TTL; leaving undefined lets browser manage per token exp
+  });
+}
+
+export function clearRefreshTokenCookie(res: Response) {
+  const isProd = process.env.NODE_ENV === "production";
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? "strict" : "lax",
+    path: "/api/auth",
+  });
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -56,7 +94,7 @@ export function authMiddleware(
   }
 
   const token = authHeader.substring(7);
-  
+
   if (tokenBlacklist.has(token)) {
     console.log("Auth failed: Token is blacklisted");
     return res.status(401).json({ error: "Token has been revoked" });

@@ -34,7 +34,7 @@ import { apiRequest } from "@/lib/queryClient";
 const registerSchema = z.object({
   fullName: z.string().min(2, "Full name is required"),
   email: z.string().email("Invalid email address"),
-  universityId: z.string().optional(),
+  universityId: z.string().min(1, "University ID is required"),
   role: z.enum(["student", "admin", "supervisor", "treasurer", "vc"]),
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string(),
@@ -152,11 +152,11 @@ export default function RegisterPage() {
                   name="universityId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>University ID (Optional)</FormLabel>
+                      <FormLabel>University ID</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
-                          placeholder="UEAB123456"
+                          placeholder="student001"
                           disabled={isLoading}
                           data-testid="input-university-id"
                         />
@@ -254,7 +254,7 @@ export default function RegisterPage() {
                 <div className="text-center">
                   <Button
                     type="button"
-                    variant="link"
+                    variant="ghost"
                     className="text-ueab-blue"
                     onClick={() => setLocation("/login")}
                     data-testid="link-login"
