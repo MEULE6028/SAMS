@@ -132,10 +132,10 @@ export default function HostelsPage() {
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
                       className={`h-2 rounded-full transition-all ${hostel.occupancyRate >= 80
-                          ? "bg-red-500"
-                          : hostel.occupancyRate >= 50
-                            ? "bg-yellow-500"
-                            : "bg-green-500"
+                        ? "bg-red-500"
+                        : hostel.occupancyRate >= 50
+                          ? "bg-yellow-500"
+                          : "bg-green-500"
                         }`}
                       style={{ width: `${hostel.occupancyRate}%` }}
                     />

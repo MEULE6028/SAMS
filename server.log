@@ -1,8 +1,30 @@
-nohup: ignoring input
-Re-optimizing dependencies because lockfile has changed
-10:06:46 AM [express] serving on port 5000
 
-A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
-10:07:30 AM [express] GET /api/swsms/applications 304 in 1414ms :: {"applications":[]}
-10:07:30 AM [express] GET /api/swsms/timecards 304 in 1859ms :: {"timeCards":[]}
-10:07:39 AM [express] GET /api/student/work-status 304 in 11574ms :: {"enrolled":true,"position":"Wor…
+> rest-express@1.0.0 dev /home/sidney/Documents/SAMS
+> NODE_ENV=development tsx server/index.ts
+
+4:49:36 AM [express] serving on port 5000
+4:50:36 AM [express] GET /api/dean/hostels 304 in 8282ms :: [{"id":38,"name":"Box Ladies Hostel","ca…
+[DEAN HOSTEL DETAILS] Hostel 39 - Found 2 students
+[DEAN HOSTEL DETAILS] Sample student roomNumber: 2C05
+[DEAN HOSTEL DETAILS] Total rooms: 35, Sample room: 1A01
+[DEAN HOSTEL DETAILS] Room 2C05 has 1 students
+[DEAN HOSTEL DETAILS] Room 3E09 has 1 students
+4:51:17 AM [express] GET /api/dean/hostels/39 200 in 6002ms :: {"id":39,"name":"Annex Ladies Hostel"…
+4:51:28 AM [express] POST /api/auth/refresh 200 in 25ms :: {"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6Ikp…
+[DEAN HOSTEL DETAILS] Hostel 40 - Found 3 students
+[DEAN HOSTEL DETAILS] Sample student roomNumber: 3E10
+[DEAN HOSTEL DETAILS] Total rooms: 30, Sample room: 1A01
+[DEAN HOSTEL DETAILS] Room 3E10 has 1 students
+[DEAN HOSTEL DETAILS] Room 3C05 has 1 students
+[DEAN HOSTEL DETAILS] Room 2E10 has 1 students
+4:51:39 AM [express] GET /api/dean/hostels/40 200 in 4957ms :: {"id":40,"name":"Kibera Ladies Hostel…
+4:52:06 AM [express] GET /api/dean/hostels 304 in 3366ms :: [{"id":38,"name":"Box Ladies Hostel","ca…
+[DEAN HOSTEL DETAILS] Hostel 38 - Found 5 students
+[DEAN HOSTEL DETAILS] Sample student roomNumber: 2A01
+[DEAN HOSTEL DETAILS] Total rooms: 45, Sample room: 1A01
+[DEAN HOSTEL DETAILS] Room 2A01 has 1 students
+[DEAN HOSTEL DETAILS] Room 3D07 has 1 students
+[DEAN HOSTEL DETAILS] Room 2E09 has 1 students
+[DEAN HOSTEL DETAILS] Room 5B03 has 1 students
+[DEAN HOSTEL DETAILS] Room 1C05 has 1 students
+4:52:14 AM [express] GET /api/dean/hostels/38 200 in 5801ms :: {"id":38,"name":"Box Ladies Hostel","…
