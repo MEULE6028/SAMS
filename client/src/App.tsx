@@ -35,6 +35,12 @@ import WSupervisorTimecards from "@/pages/wsupervisor/timecards";
 import WSupervisorDepartments from "@/pages/wsupervisor/departments";
 import SupervisorDashboard from "@/pages/supervisor/dashboard";
 import SupervisorTimecards from "@/pages/supervisor/timecards";
+import DeanDashboard from "@/pages/dean/dashboard-simple";
+import DeanHostels from "@/pages/dean/hostels";
+import DeanBookings from "@/pages/dean/bookings";
+import DeanAllocate from "@/pages/dean/allocate";
+import DeanRooms from "@/pages/dean/rooms";
+import DeanStudents from "@/pages/dean/students";
 import StudentDashboard from "@/pages/demo/student-dashboard";
 import StudentElectionsPage from "@/pages/student/elections";
 import AppointmentsPage from "@/pages/student/appointments";
@@ -212,6 +218,29 @@ function Router() {
       </Route>
       <Route path="/supervisor/timecards">
         <ProtectedRoute component={SupervisorTimecards} />
+      </Route>
+
+      {/* Residence Dean Routes */}
+      <Route path="/dean">
+        <ProtectedRoute component={DeanDashboard} />
+      </Route>
+      <Route path="/dean/dashboard">
+        <ProtectedRoute component={DeanDashboard} />
+      </Route>
+      <Route path="/dean/hostels">
+        <ProtectedRoute component={DeanHostels} />
+      </Route>
+      <Route path="/dean/bookings">
+        <ProtectedRoute component={DeanBookings} />
+      </Route>
+      <Route path="/dean/allocate">
+        <ProtectedRoute component={DeanAllocate} />
+      </Route>
+      <Route path="/dean/rooms">
+        <ProtectedRoute component={DeanRooms} />
+      </Route>
+      <Route path="/dean/students">
+        <ProtectedRoute component={DeanStudents} />
       </Route>
 
       <Route path="/">

@@ -15,6 +15,8 @@ import {
   Wallet,
   MapPin,
   Settings,
+  FileCheck,
+  UserPlus,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
@@ -97,12 +99,22 @@ const supervisorItems = [
   { title: "Timecards", url: "/supervisor/timecards", icon: Clock },
 ];
 
+const deanItems = [
+  { title: "Dashboard", url: "/dean/dashboard", icon: Home },
+  { title: "Hostels", url: "/dean/hostels", icon: Building2 },
+  { title: "Bookings", url: "/dean/bookings", icon: FileCheck },
+  { title: "Allocate Room", url: "/dean/allocate", icon: UserPlus },
+  { title: "Rooms", url: "/dean/rooms", icon: BedDouble },
+  { title: "Students", url: "/dean/students", icon: Users },
+];
+
 export function AppSidebar({ user, onLogout }: AppSidebarProps) {
   const [location] = useLocation();
 
   const isAdmin = user?.role === "admin" || user?.role === "treasurer";
   const isSupervisor = user?.role === "supervisor";
   const isWSupervisor = user?.role === "wSupervisor";
+  const isDean = user?.role === "deanLadies" || user?.role === "deanMen";
   const isStudent = user?.role === "student";
 
   return (
@@ -200,7 +212,27 @@ export function AppSidebar({ user, onLogout }: AppSidebarProps) {
               </SidebarGroup>
             )}
 
-            {!isAdmin && !isWSupervisor && !isSupervisor && (
+            {isDean && (
+              <SidebarGroup>
+                <SidebarGroupLabel>Residence Management</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {deanItems.map((item) => (
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton asChild isActive={location === item.url}>
+                          <Link href={item.url}>
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
+
+            {!isAdmin && !isWSupervisor && !isSupervisor && !isDean && (
               <SidebarGroup>
                 <SidebarGroupLabel>Main</SidebarGroupLabel>
                 <SidebarGroupContent>
@@ -220,7 +252,7 @@ export function AppSidebar({ user, onLogout }: AppSidebarProps) {
               </SidebarGroup>
             )}
 
-            {!isAdmin && !isWSupervisor && !isSupervisor && (
+            {!isAdmin && !isWSupervisor && !isSupervisor && !isDean && (
               <SidebarGroup>
                 <SidebarGroupLabel className="text-ueab-blue">Chapa360 Finance</SidebarGroupLabel>
                 <SidebarGroupContent>
@@ -240,7 +272,7 @@ export function AppSidebar({ user, onLogout }: AppSidebarProps) {
               </SidebarGroup>
             )}
 
-            {!isWSupervisor && !isSupervisor && (
+            {!isWSupervisor && !isSupervisor && !isDean && (
               <SidebarGroup>
                 <SidebarGroupLabel className="text-ueab-blue">SWSMS Work Study</SidebarGroupLabel>
                 <SidebarGroupContent>
@@ -260,7 +292,7 @@ export function AppSidebar({ user, onLogout }: AppSidebarProps) {
               </SidebarGroup>
             )}
 
-            {!isWSupervisor && !isSupervisor && (
+            {!isWSupervisor && !isSupervisor && !isDean && (
               <SidebarGroup>
                 <SidebarGroupLabel className="text-ueab-gold">SGMS Governance</SidebarGroupLabel>
                 <SidebarGroupContent>

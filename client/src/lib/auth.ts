@@ -13,6 +13,11 @@ interface AuthState {
 export function getDashboardRoute(user: User | null): string {
   if (!user) return '/login';
 
+  // Residence deans have their own dashboard
+  if (user.role === 'deanLadies' || user.role === 'deanMen') {
+    return '/dean/dashboard';
+  }
+
   // wSupervisor role has its own dashboard (program-wide oversight)
   if (user.role === 'wSupervisor') {
     return '/wsupervisor/dashboard';

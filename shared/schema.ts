@@ -5,7 +5,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // User roles enum
-export const userRoles = ["student", "admin", "supervisor", "treasurer", "vc", "wSupervisor"] as const;
+export const userRoles = ["student", "admin", "supervisor", "treasurer", "vc", "wSupervisor", "deanLadies", "deanMen"] as const;
 
 // ============ USERS & AUTHENTICATION ============
 export const users = pgTable("users", {

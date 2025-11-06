@@ -2720,6 +2720,948 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ RESIDENCE DEAN ENDPOINTS ============
+  // Residence deans manage on-campus housing for their respective gender
+  // External API: https://studedatademo.azurewebsites.net
+
+  // TEST ENDPOINT - Debug external API
+  app.get("/api/dean/test-external-api", async (req, res) => {
+    try {
+      const EXTERNAL_URL = process.env.VITE_STUDENT_API_URL || 'https://studedatademo.azurewebsites.net';
+      console.log(`[TEST] Fetching from: ${EXTERNAL_URL}/api/residences`);
+      
+      const response = await fetch(`${EXTERNAL_URL}/api/residences`);
+      const data = await response.json();
+      
+      const ladiesHostels = data.filter((r: any) => {
+        const hostelName = r.hostelName || '';
+        return hostelName.toLowerCase().includes('ladies');
+      });
+      
+      res.json({
+        totalResidences: data.length,
+        ladiesResidences: ladiesHostels.length,
+        sampleLadiesHostel: ladiesHostels[0],
+        allHostelNames: [...new Set(data.map((r: any) => r.hostelName))].filter(Boolean)
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Helper function to filter residences by gender by resolving student profiles
+  // Note: external residence records don't include student gender directly. We fetch
+  // each student profile from the external API and then filter by gender.
+  async function filterByGender(residences: any[], deanRole: string) {
+    const targetGender = deanRole === 'deanLadies' ? 'Female' : 'Male';
+    const EXTERNAL_URL = process.env.VITE_STUDENT_API_URL || 'https://studedatademo.azurewebsites.net';
+
+    // Fetch student details in parallel (with concurrency limit to avoid overload)
+    const concurrency = 8;
+    const chunks: any[] = [];
+    for (let i = 0; i < residences.length; i += concurrency) {
+      chunks.push(residences.slice(i, i + concurrency));
+    }
+
+    const results: any[] = [];
+    for (const chunk of chunks) {
+      const resolved = await Promise.all(chunk.map(async (r: any) => {
+        try {
+          // studentId in external API can be numeric or string
+          const sid = r.studentId;
+          const studentResp = await fetch(`${EXTERNAL_URL}/api/students/${sid}`);
+          if (!studentResp.ok) return null;
+          const student = await studentResp.json();
+          return { residence: r, student };
+        } catch (err) {
+          return null;
+        }
+      }));
+      results.push(...resolved.filter(Boolean));
+    }
+
+    const filtered = results.filter(item => {
+      const studentGender = item.student?.gender || item.student?.sex || '';
+      return String(studentGender).toLowerCase() === targetGender.toLowerCase();
+    }).map((it: any) => it.residence);
+
+    console.log(`[FILTER DEBUG] Dean role: ${deanRole}, Total input: ${residences.length}, Filtered output: ${filtered.length}`);
+    if (filtered.length > 0) console.log(`[FILTER DEBUG] Sample filtered hostel: ${filtered[0].hostelName}`);
+    return filtered;
+  }
+
+  // Get dashboard statistics for residence dean
+  app.get("/api/dean/dashboard/stats", authMiddleware, async (req: AuthRequest, res) => {
+    const user = req.user!;
+    
+    // Only allow deanLadies and deanMen roles
+    if (!['deanLadies', 'deanMen'].includes(user.role)) {
+      return res.status(403).json({ error: "Insufficient permissions" });
+    }
+
+    try {
+      console.log(`\n=== [DEAN DASHBOARD] ${user.role} ===`);
+      
+      // Fetch all residences from external API
+      const residencesResponse = await fetch(`${EXTERNAL_API_URL}/api/residences`);
+      if (!residencesResponse.ok) {
+        throw new Error('Failed to fetch residences from external API');
+      }
+
+      const allResidences = await residencesResponse.json();
+      console.log(`[EXTERNAL API] Total residences fetched: ${allResidences.length}`);
+      console.log(`[EXTERNAL API] Sample residence:`, JSON.stringify(allResidences[0], null, 2));
+
+  // Filter residences by gender based on dean role (resolve student profiles)
+  const residences = await filterByGender(allResidences, user.role);
+      console.log(`[FILTER] ${user.role} managing ${residences.length} residences`);
+
+      // Calculate statistics
+      const onCampusResidences = residences.filter((r: any) => r.residenceType === 'on-campus');
+      const totalStudents = onCampusResidences.length;
+
+      // Group by hostel and count rooms
+      const hostelMap = new Map<string, Set<string>>();
+      const roomMap = new Map<string, any[]>();
+
+      onCampusResidences.forEach((r: any) => {
+        const hostel = r.hostelName || 'Unknown Hostel';
+        const room = r.roomNumber || 'Unknown Room';
+        
+        if (!hostelMap.has(hostel)) {
+          hostelMap.set(hostel, new Set());
+        }
+        hostelMap.get(hostel)!.add(room);
+
+        const roomKey = `${hostel}-${room}`;
+        if (!roomMap.has(roomKey)) {
+          roomMap.set(roomKey, []);
+        }
+        roomMap.get(roomKey)!.push(r);
+      });
+
+      const totalHostels = hostelMap.size;
+      const totalRooms = Array.from(hostelMap.values()).reduce((sum, rooms) => sum + rooms.size, 0);
+
+      // Calculate occupancy (Note: roomCapacity is available in external API responses)
+      let totalBeds = 0;
+      let occupiedBeds = 0;
+      roomMap.forEach((students, roomKey) => {
+        const capacity = students[0]?.roomCapacity || 2;
+        totalBeds += capacity;
+        occupiedBeds += students.length;
+      });
+
+      const occupancyRate = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0;
+
+      // Available rooms (rooms with space)
+      const emptyRooms = Array.from(roomMap.entries()).filter(([_, students]) => {
+        const capacity = students[0]?.roomCapacity || 2;
+        return students.length < capacity;
+      }).length;
+
+      // Recent bookings (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const recentBookings = onCampusResidences.filter((r: any) => {
+        const allocatedDate = new Date(r.allocatedAt);
+        return allocatedDate >= thirtyDaysAgo;
+      }).length;
+
+      res.json({
+        totalStudents,
+        totalHostels,
+        totalRooms,
+        emptyRooms,
+        occupancyRate,
+        totalBeds,
+        occupiedBeds,
+        recentBookings,
+        gender: user.role === 'deanLadies' ? 'Female' : 'Male'
+      });
+    } catch (error: any) {
+      console.error("[DEAN DASHBOARD ERROR]", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get all rooms for residence dean
+  app.get("/api/dean/rooms", authMiddleware, async (req: AuthRequest, res) => {
+    const user = req.user!;
+    
+    if (!['deanLadies', 'deanMen'].includes(user.role)) {
+      return res.status(403).json({ error: "Insufficient permissions" });
+    }
+
+    try {
+      const { hostel, status } = req.query;
+
+      // Fetch all residences
+      const residencesResponse = await fetch(`${EXTERNAL_API_URL}/api/residences`);
+      if (!residencesResponse.ok) {
+        throw new Error('Failed to fetch residences');
+      }
+
+      const allResidences = await residencesResponse.json();
+      const residences = (await filterByGender(allResidences, user.role))
+        .filter((r: any) => r.residenceType === 'on-campus');
+
+      // Group by room
+      const roomMap = new Map<string, any>();
+
+      residences.forEach((r: any) => {
+        const roomKey = `${r.hostelName}-${r.roomNumber}`;
+        if (!roomMap.has(roomKey)) {
+          roomMap.set(roomKey, {
+            hostelName: r.hostelName,
+            roomNumber: r.roomNumber,
+            capacity: r.roomCapacity || 2,
+            students: [],
+            floor: null, // Not available from API
+            roomType: null, // Not available from API
+          });
+        }
+        roomMap.get(roomKey)!.students.push({
+          studentId: r.studentId,
+          name: `${r.firstName || ''} ${r.lastName || ''}`.trim(),
+          allocatedAt: r.allocatedAt,
+        });
+      });
+
+      // Convert to array and add occupancy info
+      let rooms = Array.from(roomMap.values()).map(room => ({
+        ...room,
+        currentOccupancy: room.students.length,
+        availableBeds: room.capacity - room.students.length,
+        status: room.students.length === 0 ? 'empty' :
+                room.students.length < room.capacity ? 'partial' : 'full'
+      }));
+
+      // Apply filters
+      if (hostel) {
+        rooms = rooms.filter(r => r.hostelName === hostel);
+      }
+
+      if (status) {
+        rooms = rooms.filter(r => r.status === status);
+      }
+
+      // Get unique hostels
+      const hostels = [...new Set(rooms.map(r => r.hostelName))];
+
+      res.json({ rooms, hostels });
+    } catch (error: any) {
+      console.error("[DEAN ROOMS ERROR]", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get room details with full student information
+  app.get("/api/dean/rooms/:hostel/:roomNumber", authMiddleware, async (req: AuthRequest, res) => {
+    const user = req.user!;
+    
+    if (!['deanLadies', 'deanMen'].includes(user.role)) {
+      return res.status(403).json({ error: "Insufficient permissions" });
+    }
+
+    try {
+      const { hostel, roomNumber } = req.params;
+
+      // Fetch all residences
+      const residencesResponse = await fetch(`${EXTERNAL_API_URL}/api/residences`);
+      if (!residencesResponse.ok) {
+        throw new Error('Failed to fetch residences');
+      }
+
+      const allResidences = await residencesResponse.json();
+      const residences = (await filterByGender(allResidences, user.role))
+        .filter((r: any) => 
+          r.residenceType === 'on-campus' &&
+          r.hostelName === hostel &&
+          r.roomNumber === roomNumber
+        );
+
+      if (residences.length === 0) {
+        return res.status(404).json({ error: 'Room not found' });
+      }
+
+      // Fetch detailed student information
+      const students = await Promise.all(
+        residences.map(async (r: any) => {
+          try {
+            const studentResponse = await fetch(`${EXTERNAL_API_URL}/api/students/${r.studentId}`);
+            if (studentResponse.ok) {
+              const studentData = await studentResponse.json();
+              return {
+                studentId: studentData.studentId,
+                studentNumericId: r.studentId,
+                name: `${studentData.firstName || ''} ${studentData.lastName || ''}`.trim(),
+                email: studentData.email,
+                phone: studentData.phone,
+                gender: studentData.gender,
+                course: studentData.course,
+                allocatedAt: r.allocatedAt,
+                bedNumber: r.bedNumber,
+              };
+            }
+            return null;
+          } catch (err) {
+            console.error(`Failed to fetch student ${r.studentId}`, err);
+            return null;
+          }
+        })
+      );
+
+      const validStudents = students.filter(s => s !== null);
+
+      const roomInfo = {
+        hostelName: hostel,
+        roomNumber,
+        capacity: residences[0]?.roomCapacity || 2,
+        currentOccupancy: validStudents.length,
+        availableBeds: (residences[0]?.roomCapacity || 2) - validStudents.length,
+        students: validStudents,
+      };
+
+      res.json(roomInfo);
+    } catch (error: any) {
+      console.error("[DEAN ROOM DETAILS ERROR]", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get all students for residence dean
+  app.get("/api/dean/students", authMiddleware, async (req: AuthRequest, res) => {
+    const user = req.user!;
+    
+    if (!['deanLadies', 'deanMen'].includes(user.role)) {
+      return res.status(403).json({ error: "Insufficient permissions" });
+    }
+
+    try {
+      const { hostel, room, search } = req.query;
+
+      // Fetch all residences
+      const residencesResponse = await fetch(`${EXTERNAL_API_URL}/api/residences`);
+      if (!residencesResponse.ok) {
+        throw new Error('Failed to fetch residences');
+      }
+
+      const allResidences = await residencesResponse.json();
+      let residences = (await filterByGender(allResidences, user.role))
+        .filter((r: any) => r.residenceType === 'on-campus');
+
+      // Apply filters
+      if (hostel) {
+        residences = residences.filter((r: any) => r.hostelName === hostel);
+      }
+
+      if (room) {
+        residences = residences.filter((r: any) => r.roomNumber === room);
+      }
+
+      // Fetch detailed student information
+      const students = await Promise.all(
+        residences.map(async (r: any) => {
+          try {
+            const studentResponse = await fetch(`${EXTERNAL_API_URL}/api/students/${r.studentId}`);
+            if (studentResponse.ok) {
+              const studentData = await studentResponse.json();
+              return {
+                studentId: studentData.studentId,
+                name: `${studentData.firstName || ''} ${studentData.lastName || ''}`.trim(),
+                email: studentData.email,
+                phone: studentData.phone,
+                gender: studentData.gender,
+                course: studentData.course,
+                hostelName: r.hostelName,
+                roomNumber: r.roomNumber,
+                bedNumber: r.bedNumber,
+                allocatedAt: r.allocatedAt,
+              };
+            }
+            return null;
+          } catch (err) {
+            return null;
+          }
+        })
+      );
+
+      let validStudents = students.filter(s => s !== null);
+
+      // Apply search filter
+      if (search) {
+        const searchLower = (search as string).toLowerCase();
+        validStudents = validStudents.filter(s =>
+          s!.name.toLowerCase().includes(searchLower) ||
+          s!.studentId.toLowerCase().includes(searchLower) ||
+          s!.email?.toLowerCase().includes(searchLower)
+        );
+      }
+
+      res.json({ students: validStudents });
+    } catch (error: any) {
+      console.error("[DEAN STUDENTS ERROR]", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get analytics data for residence dean
+  app.get("/api/dean/analytics", authMiddleware, async (req: AuthRequest, res) => {
+    const user = req.user!;
+    
+    if (!['deanLadies', 'deanMen'].includes(user.role)) {
+      return res.status(403).json({ error: "Insufficient permissions" });
+    }
+
+    try {
+      // Fetch all residences
+      const residencesResponse = await fetch(`${EXTERNAL_API_URL}/api/residences`);
+      if (!residencesResponse.ok) {
+        throw new Error('Failed to fetch residences');
+      }
+
+      const allResidences = await residencesResponse.json();
+      const residences = (await filterByGender(allResidences, user.role))
+        .filter((r: any) => r.residenceType === 'on-campus');
+
+      // Hostel distribution
+      const hostelDistribution = residences.reduce((acc: any, r: any) => {
+        if (!acc[r.hostelName]) {
+          acc[r.hostelName] = 0;
+        }
+        acc[r.hostelName]++;
+        return acc;
+      }, {});
+
+      const hostelStats = Object.entries(hostelDistribution).map(([name, count]) => ({
+        hostelName: name,
+        students: count
+      }));
+
+      // Monthly allocations (last 6 months)
+      const monthlyAllocations = [];
+      for (let i = 5; i >= 0; i--) {
+        const monthDate = new Date();
+        monthDate.setMonth(monthDate.getMonth() - i);
+        monthDate.setDate(1);
+        const monthEnd = new Date(monthDate);
+        monthEnd.setMonth(monthEnd.getMonth() + 1);
+
+        const count = residences.filter((r: any) => {
+          const allocatedDate = new Date(r.allocatedAt);
+          return allocatedDate >= monthDate && allocatedDate < monthEnd;
+        }).length;
+
+        monthlyAllocations.push({
+          month: monthDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          allocations: count
+        });
+      }
+
+      // Room occupancy breakdown
+      const roomMap = new Map<string, any[]>();
+      residences.forEach((r: any) => {
+        const key = `${r.hostelName}-${r.roomNumber}`;
+        if (!roomMap.has(key)) {
+          roomMap.set(key, []);
+        }
+        roomMap.get(key)!.push(r);
+      });
+
+      let fullRooms = 0;
+      let partialRooms = 0;
+      let emptyRooms = 0;
+
+      roomMap.forEach((students, key) => {
+        const capacity = students[0]?.roomCapacity || 2;
+        if (students.length === capacity) {
+          fullRooms++;
+        } else if (students.length > 0) {
+          partialRooms++;
+        } else {
+          emptyRooms++;
+        }
+      });
+
+      const occupancyBreakdown = [
+        { status: 'Full', count: fullRooms },
+        { status: 'Partial', count: partialRooms },
+        { status: 'Empty', count: emptyRooms }
+      ];
+
+      res.json({
+        hostelStats,
+        monthlyAllocations,
+        occupancyBreakdown
+      });
+    } catch (error: any) {
+      console.error("[DEAN ANALYTICS ERROR]", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============ DEAN RESIDENCE MANAGEMENT ENDPOINTS ============
+  
+  // Get all hostels (gender-filtered for dean)
+  app.get("/api/dean/hostels", authMiddleware, requireRole("deanLadies", "deanMen"), async (req: AuthRequest, res) => {
+    const user = req.user!;
+    const targetGender = user.role === 'deanLadies' ? 'female' : 'male';
+
+    try {
+      const EXTERNAL_URL = process.env.VITE_STUDENT_API_URL || 'https://studedatademo.azurewebsites.net';
+      
+      // Fetch all hostels
+      const hostelsResponse = await fetch(`${EXTERNAL_URL}/api/hostels`);
+      if (!hostelsResponse.ok) {
+        throw new Error(`External API error: ${hostelsResponse.status}`);
+      }
+      
+      const allHostels = await hostelsResponse.json();
+      
+      // Filter hostels by gender and fetch details
+      const hostelDetailsPromises = allHostels
+        .filter((hostel: any) => hostel.gender?.toLowerCase() === targetGender)
+        .map(async (hostel: any) => {
+          try {
+            const detailsResponse = await fetch(`${EXTERNAL_URL}/api/hostels/${hostel.id}`);
+            if (!detailsResponse.ok) return null;
+            
+            const details = await detailsResponse.json();
+            
+            // Calculate statistics from rooms
+            const totalCapacity = details.rooms?.reduce((sum: number, room: any) => sum + (room.capacity || 0), 0) || 0;
+            const totalOccupied = details.rooms?.reduce((sum: number, room: any) => sum + (room.currentOccupancy || 0), 0) || 0;
+            const totalAvailable = totalCapacity - totalOccupied;
+            const occupancyRate = totalCapacity > 0 ? Math.round((totalOccupied / totalCapacity) * 100) : 0;
+            
+            return {
+              id: hostel.id,
+              name: hostel.name,
+              capacity: totalCapacity,
+              occupiedBeds: totalOccupied,
+              availableBeds: totalAvailable,
+              occupancyRate: occupancyRate,
+              totalRooms: hostel.totalRooms || details.rooms?.length || 0,
+              gender: targetGender,
+              location: hostel.location || details.location
+            };
+          } catch (error) {
+            console.error(`Error fetching hostel ${hostel.id} details:`, error);
+            return null;
+          }
+        });
+      
+      const hostelDetails = await Promise.all(hostelDetailsPromises);
+      const filteredHostels = hostelDetails.filter(h => h !== null);
+      
+      res.json(filteredHostels);
+    } catch (error: any) {
+      console.error("[DEAN HOSTELS ERROR]", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get detailed hostel information with rooms
+  app.get("/api/dean/hostels/:id", authMiddleware, requireRole("deanLadies", "deanMen"), async (req: AuthRequest, res) => {
+    const user = req.user!;
+    const targetGender = user.role === 'deanLadies' ? 'female' : 'male';
+    const hostelId = parseInt(req.params.id);
+
+    try {
+      const EXTERNAL_URL = process.env.VITE_STUDENT_API_URL || 'https://studedatademo.azurewebsites.net';
+      
+      // Fetch hostel details
+      const hostelResponse = await fetch(`${EXTERNAL_URL}/api/hostels/${hostelId}`);
+      if (!hostelResponse.ok) {
+        return res.status(404).json({ error: "Hostel not found" });
+      }
+      
+      const hostelDetails = await hostelResponse.json();
+      
+      // Check if hostel matches dean's gender
+      if (hostelDetails.gender?.toLowerCase() !== targetGender) {
+        return res.status(403).json({ error: "Access denied to this hostel" });
+      }
+      
+      // Fetch all residences to find students in this hostel
+      const residencesResponse = await fetch(`${EXTERNAL_URL}/api/residences`);
+      const allResidences = residencesResponse.ok ? await residencesResponse.json() : [];
+      
+      // Filter residences for this hostel
+      const hostelResidences = allResidences.filter((r: any) => r.hostelId === hostelId);
+      
+      // Fetch student details for each residence
+      const studentsPromises = hostelResidences.map(async (residence: any) => {
+        try {
+          const studentResponse = await fetch(`${EXTERNAL_URL}/api/students/${residence.studentId}`);
+          if (!studentResponse.ok) return null;
+          const student = await studentResponse.json();
+          return {
+            ...student,
+            roomNumber: residence.roomNumber,
+            bedNumber: residence.bedNumber
+          };
+        } catch (error) {
+          return null;
+        }
+      });
+      
+      const students = (await Promise.all(studentsPromises)).filter(s => s !== null);
+      
+      // Calculate statistics
+      const totalCapacity = hostelDetails.rooms?.reduce((sum: number, room: any) => sum + (room.capacity || 0), 0) || 0;
+      const totalOccupied = hostelDetails.rooms?.reduce((sum: number, room: any) => sum + (room.currentOccupancy || 0), 0) || 0;
+      
+      res.json({
+        id: hostelDetails.id,
+        name: hostelDetails.name,
+        capacity: totalCapacity,
+        occupiedBeds: totalOccupied,
+        availableBeds: totalCapacity - totalOccupied,
+        occupancyRate: totalCapacity > 0 
+          ? Math.round((totalOccupied / totalCapacity) * 100) 
+          : 0,
+        totalRooms: hostelDetails.rooms?.length || 0,
+        rooms: hostelDetails.rooms || [],
+        students: students,
+        gender: targetGender,
+        location: hostelDetails.location
+      });
+    } catch (error: any) {
+      console.error("[DEAN HOSTEL DETAILS ERROR]", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get available rooms in a hostel
+  app.get("/api/dean/hostels/:id/available-rooms", authMiddleware, requireRole("deanLadies", "deanMen"), async (req: AuthRequest, res) => {
+    const user = req.user!;
+    const targetGender = user.role === 'deanLadies' ? 'Female' : 'Male';
+    const hostelId = req.params.id;
+
+    try {
+      const EXTERNAL_URL = process.env.VITE_STUDENT_API_URL || 'https://studedatademo.azurewebsites.net';
+      
+      // Fetch available rooms from external API
+      const availableRoomsResponse = await fetch(`${EXTERNAL_URL}/api/hostels/${hostelId}/available-rooms`);
+      if (!availableRoomsResponse.ok) {
+        return res.status(404).json({ error: "Hostel not found" });
+      }
+      
+      const availableRooms = await availableRoomsResponse.json();
+      
+      // Return all available rooms (gender separation is handled by hostel assignment)
+      res.json({
+        hostelId,
+        gender: targetGender,
+        availableRooms
+      });
+    } catch (error: any) {
+      console.error("[DEAN AVAILABLE ROOMS ERROR]", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get room booking requests (gender-filtered)
+  app.get("/api/dean/bookings", authMiddleware, requireRole("deanLadies", "deanMen"), async (req: AuthRequest, res) => {
+    const user = req.user!;
+    const targetGender = user.role === 'deanLadies' ? 'Female' : 'Male';
+    const status = req.query.status as string || 'pending';
+
+    try {
+      const EXTERNAL_URL = process.env.VITE_STUDENT_API_URL || 'https://studedatademo.azurewebsites.net';
+      
+      // Fetch booking requests with status filter
+      const bookingsResponse = await fetch(`${EXTERNAL_URL}/api/residences/bookings?status=${status}`);
+      if (!bookingsResponse.ok) {
+        throw new Error(`External API error: ${bookingsResponse.status}`);
+      }
+      
+      const allBookings = await bookingsResponse.json();
+      
+      // For each booking, fetch student details to check gender
+      const bookingsWithStudentInfo = await Promise.all(
+        allBookings.map(async (booking: any) => {
+          try {
+            const studentResponse = await fetch(`${EXTERNAL_URL}/api/students/${booking.studentId}`);
+            if (!studentResponse.ok) return null;
+            
+            const student = await studentResponse.json();
+            
+            // Only return bookings for target gender
+            if (student.gender === targetGender) {
+              return {
+                ...booking,
+                studentName: `${student.firstName} ${student.lastName}`,
+                studentEmail: student.email,
+                studentPhone: student.phone,
+                studentGender: student.gender,
+                departmentName: student.departmentName,
+                programName: student.programName
+              };
+            }
+            return null;
+          } catch (error) {
+            console.error(`Error fetching student ${booking.studentId}:`, error);
+            return null;
+          }
+        })
+      );
+      
+      const filteredBookings = bookingsWithStudentInfo.filter(b => b !== null);
+      
+      res.json({
+        bookings: filteredBookings,
+        total: filteredBookings.length,
+        status,
+        gender: targetGender
+      });
+    } catch (error: any) {
+      console.error("[DEAN BOOKINGS ERROR]", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Approve or reject a booking request
+  app.put("/api/dean/bookings/:id/approve", authMiddleware, requireRole("deanLadies", "deanMen"), async (req: AuthRequest, res) => {
+    const user = req.user!;
+    const targetGender = user.role === 'deanLadies' ? 'Female' : 'Male';
+    const bookingId = req.params.id;
+    const { status, note } = req.body;
+
+    // Validate status
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: "Status must be 'approved' or 'rejected'" });
+    }
+
+    try {
+      const EXTERNAL_URL = process.env.VITE_STUDENT_API_URL || 'https://studedatademo.azurewebsites.net';
+      
+      // First, verify the booking belongs to a student of the correct gender
+      const bookingsResponse = await fetch(`${EXTERNAL_URL}/api/residences/bookings`);
+      if (!bookingsResponse.ok) {
+        throw new Error(`External API error: ${bookingsResponse.status}`);
+      }
+      
+      const allBookings = await bookingsResponse.json();
+      const booking = allBookings.find((b: any) => b.id === parseInt(bookingId));
+      
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+      
+      // Check student gender
+      const studentResponse = await fetch(`${EXTERNAL_URL}/api/students/${booking.studentId}`);
+      if (!studentResponse.ok) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      
+      const student = await studentResponse.json();
+      
+      if (student.gender !== targetGender) {
+        return res.status(403).json({ 
+          error: `Access denied. You can only manage bookings for ${targetGender.toLowerCase()} students.` 
+        });
+      }
+      
+      // Approve/reject the booking
+      const approvalResponse = await fetch(`${EXTERNAL_URL}/api/residences/bookings/${bookingId}/approve`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status,
+          approvedBy: user.id,
+          note: note || `${status === 'approved' ? 'Approved' : 'Rejected'} by ${user.role === 'deanLadies' ? 'Ladies Dean' : 'Men Dean'}`
+        })
+      });
+      
+      if (!approvalResponse.ok) {
+        const errorData = await approvalResponse.json();
+        throw new Error(errorData.error || 'Failed to update booking');
+      }
+      
+      const updatedBooking = await approvalResponse.json();
+      
+      res.json({
+        success: true,
+        booking: {
+          ...updatedBooking,
+          studentName: `${student.firstName} ${student.lastName}`,
+          studentEmail: student.email
+        },
+        message: `Booking ${status} successfully`
+      });
+    } catch (error: any) {
+      console.error("[DEAN APPROVE BOOKING ERROR]", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Manually allocate a room to a student
+  app.post("/api/dean/allocate-room", authMiddleware, requireRole("deanLadies", "deanMen"), async (req: AuthRequest, res) => {
+    const user = req.user!;
+    const targetGender = user.role === 'deanLadies' ? 'Female' : 'Male';
+    const { studentId, hostelId, roomId, bedNumber } = req.body;
+
+    // Validate required fields
+    if (!studentId || !hostelId || !roomId || !bedNumber) {
+      return res.status(400).json({ 
+        error: "Missing required fields: studentId, hostelId, roomId, bedNumber" 
+      });
+    }
+
+    try {
+      const EXTERNAL_URL = process.env.VITE_STUDENT_API_URL || 'https://studedatademo.azurewebsites.net';
+      
+      // First, verify the student's gender
+      const studentResponse = await fetch(`${EXTERNAL_URL}/api/students/${studentId}`);
+      if (!studentResponse.ok) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      
+      const student = await studentResponse.json();
+      
+      if (student.gender !== targetGender) {
+        return res.status(403).json({ 
+          error: `Access denied. You can only allocate rooms for ${targetGender.toLowerCase()} students.` 
+        });
+      }
+      
+      // Check if student already has a residence
+      const existingResidenceResponse = await fetch(`${EXTERNAL_URL}/api/residences/student/${studentId}`);
+      if (existingResidenceResponse.ok) {
+        const existingResidence = await existingResidenceResponse.json();
+        if (existingResidence && existingResidence.residenceType === 'on-campus') {
+          return res.status(400).json({ 
+            error: "Student already has a room allocation. Please deallocate first." 
+          });
+        }
+      }
+      
+      // Verify the hostel and room are appropriate for the gender
+      const hostelResponse = await fetch(`${EXTERNAL_URL}/api/hostels/${hostelId}`);
+      if (!hostelResponse.ok) {
+        return res.status(404).json({ error: "Hostel not found" });
+      }
+      
+      const hostelDetails = await hostelResponse.json();
+      const room = hostelDetails.rooms?.find((r: any) => r.id === parseInt(roomId));
+      
+      if (!room) {
+        return res.status(404).json({ error: "Room not found" });
+      }
+      
+      if (room.availableBeds <= 0) {
+        return res.status(400).json({ error: "No available beds in this room" });
+      }
+      
+      // Create the residence allocation
+      const allocationResponse = await fetch(`${EXTERNAL_URL}/api/residences`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentId: parseInt(studentId),
+          residenceType: 'on-campus',
+          hostelId: parseInt(hostelId),
+          roomId: parseInt(roomId),
+          bedNumber,
+          allocated: true,
+          allocatedBy: user.id,
+          allocatedAt: new Date().toISOString()
+        })
+      });
+      
+      if (!allocationResponse.ok) {
+        const errorData = await allocationResponse.json();
+        throw new Error(errorData.error || 'Failed to allocate room');
+      }
+      
+      const allocation = await allocationResponse.json();
+      
+      res.json({
+        success: true,
+        allocation: {
+          ...allocation,
+          studentName: `${student.firstName} ${student.lastName}`,
+          studentEmail: student.email,
+          hostelName: hostelDetails.name,
+          roomNumber: room.roomNumber
+        },
+        message: `Room allocated successfully to ${student.firstName} ${student.lastName}`
+      });
+    } catch (error: any) {
+      console.error("[DEAN ALLOCATE ROOM ERROR]", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Deallocate a student from their room
+  app.delete("/api/dean/deallocate/:studentId", authMiddleware, requireRole("deanLadies", "deanMen"), async (req: AuthRequest, res) => {
+    const user = req.user!;
+    const targetGender = user.role === 'deanLadies' ? 'Female' : 'Male';
+    const studentId = req.params.studentId;
+
+    try {
+      const EXTERNAL_URL = process.env.VITE_STUDENT_API_URL || 'https://studedatademo.azurewebsites.net';
+      
+      // First, verify the student's gender
+      const studentResponse = await fetch(`${EXTERNAL_URL}/api/students/${studentId}`);
+      if (!studentResponse.ok) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      
+      const student = await studentResponse.json();
+      
+      if (student.gender !== targetGender) {
+        return res.status(403).json({ 
+          error: `Access denied. You can only deallocate rooms for ${targetGender.toLowerCase()} students.` 
+        });
+      }
+      
+      // Check if student has a residence
+      const residenceResponse = await fetch(`${EXTERNAL_URL}/api/residences/student/${studentId}`);
+      if (!residenceResponse.ok) {
+        return res.status(404).json({ error: "Student has no room allocation" });
+      }
+      
+      const residence = await residenceResponse.json();
+      
+      if (residence.residenceType !== 'on-campus') {
+        return res.status(400).json({ error: "Student is not in on-campus housing" });
+      }
+      
+      // Deallocate the student
+      const deallocateResponse = await fetch(`${EXTERNAL_URL}/api/residences/${studentId}`, {
+        method: 'DELETE'
+      });
+      
+      if (!deallocateResponse.ok) {
+        const errorData = await deallocateResponse.json();
+        throw new Error(errorData.error || 'Failed to deallocate room');
+      }
+      
+      res.json({
+        success: true,
+        message: `Successfully deallocated ${student.firstName} ${student.lastName} from ${residence.hostelName} - ${residence.roomNumber}`,
+        student: {
+          studentId: student.studentId,
+          name: `${student.firstName} ${student.lastName}`,
+          email: student.email
+        },
+        previousAllocation: {
+          hostelName: residence.hostelName,
+          roomNumber: residence.roomNumber,
+          bedNumber: residence.bedNumber
+        }
+      });
+    } catch (error: any) {
+      console.error("[DEAN DEALLOCATE ERROR]", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ============ DEPARTMENT SUPERVISOR ENDPOINTS ============
   // Department supervisors (HODs) can manage timecards for students in their department
 
@@ -3167,6 +4109,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error("❌ Fix failed:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // ============ CREATE RESIDENCE DEANS ============
+  app.post("/api/admin/create-residence-deans", async (req, res) => {
+    try {
+      console.log("🏠 Creating Residence Deans...");
+
+      const deans = [
+        {
+          email: "deanladies@on-campus.ueab.ac.ke",
+          password: "password123",
+          fullName: "Ladies Residence Dean",
+          universityId: "DEAN-L-001",
+          role: "deanLadies" as const,
+        },
+        {
+          email: "deanmen@on-campus.ueab.ac.ke",
+          password: "password123",
+          fullName: "Men Residence Dean",
+          universityId: "DEAN-M-001",
+          role: "deanMen" as const,
+        },
+      ];
+
+      const created = [];
+      for (const dean of deans) {
+        // Check if already exists
+        const existing = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, dean.email))
+          .limit(1);
+
+        if (existing.length > 0) {
+          console.log(`✓ ${dean.fullName} already exists`);
+          created.push({ ...dean, status: "already_exists" });
+          continue;
+        }
+
+        // Hash password and create user
+        const hashedPassword = await hashPassword(dean.password);
+        await db.insert(users).values({
+          ...dean,
+          password: hashedPassword,
+        });
+
+        console.log(`✓ Created ${dean.fullName}`);
+        created.push({ ...dean, status: "created" });
+      }
+
+      console.log("✅ Residence deans setup complete!");
+      res.json({
+        success: true,
+        message: "Residence deans created successfully",
+        deans: created.map(d => ({
+          email: d.email,
+          fullName: d.fullName,
+          role: d.role,
+          status: d.status
+        }))
+      });
+    } catch (error: any) {
+      console.error("❌ Failed to create residence deans:", error);
       res.status(500).json({ success: false, error: error.message });
     }
   });
